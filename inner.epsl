@@ -1,0 +1,601 @@
+#import irgen;
+#import eewriter;
+#import wrapper;
+
+State {
+    Str:filename,
+    [Func_]:funcs,
+    [ExternFunc]:extern_funcs,
+    [Func_]:func_stack,
+    [Struct_]:structs,
+    [IRGlobal]:globals
+}
+
+// in the future this will @extend ExternFunc
+Func_ {
+    ExternFunc:base,
+    [Block]:block_stack,
+    IRBasicBlock:current_bb,
+    Val?:last_ret_val
+}
+
+ExternFunc {
+    IRFunc:ir_func,
+    Type_?:ret_type_,
+    [Type_]:args
+}
+
+#global State?:state;
+
+State#get state {
+    if (state) {
+        return [state].unwrap;
+    } else {
+        abort "State not initialized";
+    };
+}
+
+#init state <Str:filename> {
+    state = State [
+        filename, [Func_] [], [ExternFunc] [], [Func_] [],
+        [Struct_] [], [IRGlobal] []
+    ];
+}
+
+IRStructDef#<Struct_:struct_>.ir {
+    [IRType]:members = [IRType] [];
+    if (struct_.is_ref) {
+        // add the ref counter field
+        [members].append[int type [64]];
+    };
+    for (Field:field in struct_.fields) {
+        [members].append[[field.type_].ir];
+    };
+    return IRStructDef [struct_.id, false, IRStructType [members]];
+}
+
+IRModule#build module {
+    State:state = get state;
+    [IRStructDef]:ir_structs = [IRStructDef] [];
+    for (Struct_:struct_ in state.structs) {
+        [ir_structs].append[[struct_].ir];
+    };
+    [IRFunc]:ir_funcs = [IRFunc] [];
+    for (ExternFunc:extern_func in state.extern_funcs) {
+        [ir_funcs].append[extern_func.ir_func];
+    };
+    for (Func_:func in state.funcs) {
+        [ir_funcs].append[func.base.ir_func];
+    };
+    // TODO: use non-default values for target triple & datalayout
+    return IRModule [
+        "x86_64-unknown-linux-gnu", "", state.filename, 
+        state.globals, ir_structs, ir_funcs
+    ];
+}
+
+#clear state {
+    state = null;
+}
+
+Func_#get active func {
+    [Func_]:func_stack = get state.func_stack;
+    return func_stack[[func_stack].len-1];
+}
+
+ExternFunc?#get func named <Str:name> {
+    for (Func_:func in get state.funcs) {
+        if ([func.base.ir_func.name] equals [name]) {
+            return func.base;
+        };
+    };
+
+    for (ExternFunc:extern_func in get state.extern_funcs) {
+        if ([extern_func.ir_func.name] equals [name]) {
+            return extern_func;
+        };
+    };
+
+    return null;
+}
+
+ExternFunc#create new extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <Bool:has_vargs> {
+    [IRRegister]:register_args = [IRRegister] [];
+    for (W:i enumerating arg_types_) {
+        [register_args].append[IRRegister [false, "arg{}" % i, [arg_types_[i]].ir]];
+    };
+    IRFunc:ir = IRFunc [[ret_type_].ir, name, register_args, has_vargs, null];
+    return ExternFunc [ir, ret_type_, arg_types_];
+}
+
+Bool#extern func matches <ExternFunc:fn> <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <Bool:has_vargs> {
+    if ([fn.ir_func.name] not equals [name]) {
+        return false;
+    };
+    if ([fn.ir_func.has_vargs] ^ [has_vargs]) {
+        return false;
+    };
+    if (![fn.ret_type_] == [ret_type_]) {
+        return false;
+    };
+    // TODO: replace fn.args vs arg_types_ equality checking with 'deep equals' once implemented
+    if ([fn.args].len != [arg_types_].len) {
+        return false;
+    };
+    for (W:i enumerating arg_types_) {
+        if (![fn.args[i]] == [arg_types_[i]]) {
+            return false;
+        };
+    };
+    return true;
+}
+
+ExternFunc#require extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <Bool:has_vargs> {
+    ExternFunc?:maybe_fn = get func named [name];
+    if (maybe_fn) {
+        ExternFunc:fn = [maybe_fn].unwrap;
+        if (extern func matches [fn] [ret_type_] [name] [arg_types_] [has_vargs]) {
+            return fn;
+        } else {
+            abort "An extern function already exists by the name {}, but does not share the same return type_ or parameters" % name;
+        };
+    };
+    ExternFunc:extern_func = create new extern fn [ret_type_] [name] [arg_types_] [has_vargs];
+    [get state.extern_funcs].append[extern_func];
+    return extern_func;
+}
+
+Func_?#defined fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
+    for (Func_:func in get state.funcs) {
+        if ([func.base.ir_func.name] equals [name]) {
+             if (extern func matches [func.base] [ret_type_] [name] [arg_types_] [false]) {
+                return func;
+             } else {
+                abort "A function already exists with the name {}, but does not share the same return type_ or parameters" % name;
+             };
+        };
+    };
+    
+    return null;
+}
+
+Func_#new fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
+    [ExternFunc]:extern_funcs = get state.extern_funcs;
+    for (W:i enumerating extern_funcs step -1) {
+        ExternFunc:extern_func = extern_funcs[i];
+        if ([extern_func.ir_func.name] equals [name]) {
+            if (extern func matches [extern_func] [ret_type_] [name] [arg_types_] [false]) {
+                [extern_funcs].pop[i];
+            } else {
+                abort "An extern function already exists with the name {}, but has the incorrect prototype" % name;
+            };
+        };
+    };
+    
+    ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false];
+    IRBasicBlock:entry_bb = IRBasicBlock [0, [IRInstruction] [], false];
+    [IRBasicBlock]:basic_blocks = [IRBasicBlock] [entry_bb];
+    base.ir_func.body = IRFuncBody [basic_blocks, 1];
+    return Func_ [base, [Block] [], entry_bb, null];
+}
+
+#add fn <Func_:func> {
+    State:state = get state;
+    [state.func_stack].append[func];
+    [state.funcs].append[func];
+}
+
+#add block <Block:block> to stack {
+    [get active func.block_stack].append[block];
+}
+
+Block#pop from block stack {
+    [Block]:block_stack = get active func.block_stack;
+    return [block_stack].pop[[block_stack].len-1];
+}
+
+IRType#<Type_?:maybe_type_>.ir {
+    if (maybe_type_) {
+        return [[maybe_type_].unwrap].ir;
+    } else {
+        return IRType [null, null, null, IRVoidType [], null, null, null];
+    };
+}
+
+IRType#<Type_:type_>.ir {
+    if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"]) 
+        || ([type_.name] equals ["Z"])) {
+        return int type [(W)type_.bits];
+    } elif ([type_.name] equals ["Q"]) {
+        return float type [(W)type_.bits];
+    } elif (([type_.name] equals ["Null"]) || ([type_.name] equals ["Optional"]) 
+        || ([type_.name] equals ["File"]) || ([type_.name] equals ["Array"])
+        || ([type_.name] equals ["Internal"]) || ([type_.name] equals ["Pointer"])) {
+        return ptr type;
+    } else {
+        Struct_?:maybe_struct = [type_].get_struct;
+
+        if (maybe_struct) {
+            Struct_:struct_ = [maybe_struct].unwrap;
+            if (struct_.is_ref) {
+                return ptr type;
+            } else {
+                [IRType]:members = [IRType] [];
+                [members].require_capacity[[struct_.fields].len];
+                for (Field:field in struct_.fields) {
+                    [members].append[[field.type_].ir];
+                };
+                return struct_ type [members];
+            };
+        };
+
+        abort "Unknown type_ {}" % [type_].stringify;
+    };
+}
+
+IRType#<Type_:type_>.pointee {
+    if ([type_.name] equals ["Array"]) {
+        return struct_ type [[IRType] [int type [64], int type [64], int type [64], ptr type]];
+    } elif ([type_.name] equals ["Pointer"]) {
+        return [type_.generics[0]].ir;
+    } elif ([type_.name] equals ["Optional"]) {
+        return [type_.generics[0]].pointee;
+    } else {
+        Struct_?:maybe_struct = [type_].get_struct;
+
+        if (maybe_struct) {
+            Struct_:struct_ = [maybe_struct].unwrap;
+            if (!struct_.is_ref) {
+                abort "Only ref structs have a pointee type, {} is not a ref struct" % struct_.id;
+            };
+            [IRType]:members = [IRType] [int type [64] /* the ref counter */];
+            [members].require_capacity[[struct_.fields].len+1];
+            for (Field:field in struct_.fields) {
+                [members].append[[field.type_].ir];
+            };
+            return struct_ type [members];
+        };
+
+        abort "Type_ {} does not have a pointee IRType" % [type_].stringify;
+    };
+}
+
+IRValue#<Val:val>.get {
+    if (val.basic) {
+        return [val.basic].unwrap.val;
+    } elif (val.assignable) {
+        return emit [load [[val.assignable].unwrap.addr] to [[val.type_].ir]];
+    } elif (val.global_ptr) {
+        return [val.global_ptr].unwrap.addr;
+    } else {
+        abort "Invalid Val";
+    };
+}
+
+IRBasicBlock#current bb {
+    return get active func.current_bb;
+}
+
+IRBasicBlock#new bb {
+    IRBasicBlock:bb = IRBasicBlock [next id, [IRInstruction] [], false];
+    [[get active func.base.ir_func.body].unwrap.blocks].append[bb];
+    return bb;
+}
+
+#set current bb <IRBasicBlock:bb> {
+    get active func.current_bb = bb;
+}
+
+W#next id {
+    return [get active func.base.ir_func.body].unwrap.id_counter++;
+}
+
+Str#name register <W:id> {
+    return ".{}" % id;
+}
+
+IRRegister#new register <IRType:type> {
+    return IRRegister [false, name register [next id], type];
+}
+
+IRValue#make_val <IRRegister:reg> {
+    return IRValue [reg, null];
+}
+
+IRValue#make_val <IRValuedInstruction:valued> {
+    return make_val [valued.register];
+}
+
+IRValue#emit <IRValuedInstruction:valued> {
+    [current bb.instructions].append[make instruction [valued]];
+    return make_val [valued];
+}
+
+#emit <IRInstruction:instruction> {
+    [current bb.instructions].append[instruction];
+    if (instruction.ret_void || instruction.ret || instruction.conditional_branch
+        || instruction.unconditional_branch || instruction.switch_ || instruction.unreachable) {
+        current bb.is_terminated = true;
+    };
+}
+
+#emit <IRInstruction:instruction> unless terminated {
+    if (!current bb.is_terminated) {
+        emit [instruction];
+    };
+}
+
+Val#basic val <Type_:type_> <IRValue:val> {
+    return Val [type_, BasicVal [val, current bb], null, null];
+}
+
+Val#assignable val <Type_:type_> <IRValue:addr> {
+    return Val [type_, null, AssignableVal [addr], null];
+}
+
+Val#global ptr val <Type_:type_> <IRValue:addr> {
+    return Val [type_, null, null, GlobalPtrVal [addr]];
+}
+
+IRValue#bitwise not <Type_:type_> <IRValue:val> {
+    return emit [[val] XOR [make const [-1] [(W)type_.bits]] to [[type_].ir]];
+}
+
+IRValue#compute truth value <Type_:type_> <IRValue:val> {
+    if ([type_].is_int && type_.bits == 1) {
+        return val;
+    } elif ([type_.name] equals ["Optional"]) {
+        return emit [compare int [val] ["ne"] [make const null_]];
+    } elif ([type_].is_int) {
+        return emit [compare int [val] ["ne"] [make const [0] [(W)type_.bits]]];
+    } elif ([type_].is_float) {
+        return emit [compare float [val] ["one"] [make const [0.0] [(W)type_.bits]]];
+    } elif ([type_.name] equals ["Null"]) {
+        return make const [false];
+    } elif ([type_.name] equals ["Internal"]) {
+        return make const [true];
+    } elif ([type_].get_struct) {
+        return make const [true];
+    };
+
+    abort "Can't compute the truth value of type_ {}" % [type_].stringify;
+}
+
+IRValue#compute untruth value <Type_:type_> <IRValue:val> {
+    if ([type_].is_int && type_.bits == 1) {
+        return bitwise not [type_] [val];
+    } elif ([type_.name] equals ["Optional"]) {
+        return emit [compare int [val] ["eq"] [make const null_]];
+    } elif ([type_].is_int) {
+        return emit [compare int [val] ["eq"] [make const [0] [(W)type_.bits]]];
+    } elif ([type_].is_float) {
+        return emit [compare float [val] ["oeq"] [make const [0.0] [(W)type_.bits]]];
+    } elif ([type_.name] equals ["Null"]) {
+        return make const [true];
+    } elif ([type_.name] equals ["Internal"]) {
+        return make const [false];
+    } elif ([type_].get_struct) {
+        return make const [false];
+    };
+    
+    abort "Can't compute the untruth value of type_ {}" % [type_].stringify;
+}
+
+IRValue#convert integer <IRValue:val> bits from <Type_:from> to <Type_:to> {
+    if (to.bits > from.bits) {
+        if ([from].is_signed_int) {
+            return emit [sign extend [val] to [[to].ir]];
+        } else {
+            return emit [zero extend [val] to [[to].ir]];
+        };
+    } elif (to.bits < from.bits) {
+        return emit [truncate [val] to [[to].ir]];
+    } else {
+        return val;
+    };
+}
+
+IRValue#convert float <IRValue:val> bits from <Type_:from> to <Type_:to> {
+    if (to.bits > from.bits) {
+        return emit [float extend [val] to [[to].ir]];
+    } elif (to.bits < from.bits) {
+        return emit [float truncate [val] to [[to].ir]];
+    } else {
+        return val;
+    };
+}
+
+IRValue#cast <IRValue:val> from <Type_:from> to <Type_:to> {
+    if ([from] == [to]) {
+        return val;
+    } elif (([from.name] equals ["Optional"]) && ([from.generics[0]?] == [(Type_?)to])) {
+        return val;
+    } elif (([to.name] equals ["Optional"]) && ([to.generics[0]?] == [(Type_?)from])) {
+/*TODO: replace the above 3 lines with:
+    } elif (([from.name] equals ["Optional"]) && ([from.generics[0]] == [to])) {
+        return val;
+    } elif (([to.name] equals ["Optional"]) && ([to.generics[0]] == [from])) {
+  once && short circuts*/
+        return val;
+    } elif ([to.name] equals ["Bool"]) {
+        return compute truth value [from] [val];
+    } elif ([from].is_int && [to].is_int) {
+        return convert integer [val] bits from [from] to [to];
+    } elif ([from].is_float && [to].is_float) {
+        return convert float [val] bits from [from] to [to];
+    } elif ([from].is_float && [to].is_unsigned_int) {
+        return emit [float [val] to unsigned [[to].ir]];
+    } elif ([from].is_float && [to].is_signed_int) {
+        return emit [float [val] to signed [[to].ir]];
+    } elif ([from].is_unsigned_int && [to].is_float) {
+        return emit [unsigned [val] to float [[to].ir]];
+    } elif ([from].is_signed_int && [to].is_float) {
+        return emit [signed [val] to float [[to].ir]];
+    } elif ([from.name] equals ["Null"]) {
+        return val;
+    } elif ([from.name] equals ["Internal"]) {
+        return val;
+    } elif ([to.name] equals ["Internal"]) {
+        return val;
+    } elif ([from.name] equals ["Pointer"]) {
+        return val;
+    } elif ([to.name] equals ["Pointer"]) {
+        return val;
+    };
+    
+    abort "There is no known way to cast values of type_ {} to {}" % [from].stringify % [to].stringify;
+}
+
+Val#do_Val_cmp<Val:a><Str:cmpop><Val:b> {
+    assert type_ equality [a], [b];
+    if ([a.type_].is_float) {
+        return basic val [Bool_] [emit [compare float [[a].get] [["o"]+[cmpop]] [[b].get]]];
+    } else {
+        return basic val [Bool_] [emit [compare int [[a].get] [cmpop] [[b].get]]];
+    };
+}
+
+#call <ExternFunc:func> <[Val]:args> {
+    [IRValue]:arg_vals = [IRValue] [];
+    for (W:i enumerating args) {
+        if (![args[i].type_] == [func.args[i]]) {
+            abort "Incorrect type_ passed as argument to function";
+        };
+        [arg_vals].append[[args[i]].get];
+    };
+
+    W:varg_count = [args].len - [func.args].len;
+    
+    if (func.ret_type_) {
+        Type_:ret_type_ = [func.ret_type_].unwrap;
+        IRValue:result = emit [call [[ret_type_].ir] [func.ir_func.name] [arg_vals] [varg_count]];
+        get active func.last_ret_val = basic val [ret_type_] [result];
+    } else {
+        emit [call void [func.ir_func.name] [arg_vals] [varg_count]];
+    };
+}
+
+#require basic block termination {
+    if (!current bb.is_terminated) {
+        abort "The current basic block must be terminated by this point";
+    };
+}
+
+Val#access field <W:nth> of <Val:val> as <Type_:type_> {
+    return basic val [Pointer [type_]] [emit [
+        GEP [[val.type_].pointee] [[val].get] [[IRValue] [
+            make const [0] [64], make const [nth]
+        ]]
+    ]];
+}
+
+IRConstant#get_const_from_val<Val:val> {
+    if (!val.basic) {
+        abort "Expected constant";
+    };
+    IRValue:ir_val = [val.basic].unwrap.val;
+    if (!ir_val.constant) {
+        abort "Expected constant";
+    };
+    return [ir_val.constant].unwrap;
+}
+
+IRValue#make_global <IRType:ir_type> <Str?:provided_name> <IRConstant?:basic_init> <Str?:str_init> <Bool:is_const> {
+    Bool:insignificant_name = [provided_name].is_null;
+    if (!provided_name) {
+        Str:frmt_str = "global_{}_{}";
+        if (is_const) {
+            frmt_str = "const_{}_{}";
+        };
+        provided_name = frmt_str % get filename % [get state.globals].len;
+    };
+    Str:name = [provided_name].unwrap;
+    IRRegister:register = IRRegister [true, name, ptr type];
+    Str?:linkage = null;
+    if (insignificant_name) {
+        linkage = "private";
+    };
+    Bool:named_addr = !insignificant_name;
+    [get state.globals].append[IRGlobal [
+        register, linkage, named_addr, is_const, ir_type, basic_init, str_init
+    ]];
+    return IRValue [register, null];
+}
+
+L#index of field <Str:name> in <Struct_:struct_> {
+    for (L:i enumerating struct_.fields) {
+        if ([struct_.fields[i].name] equals [name]) {
+            return i;
+        };
+    };
+    abort "Field {} not found in struct {}" % name % struct_.id;
+}
+
+#<Val:val>._nonnull_check_ref<Val:rc> {
+    assert [val] is nonnullable;
+    assert [val] is ref;
+    Type_:type_ = val.type_;
+if (fn [null] ["check_ref_{}" % [val.type_].stringify] [[Type_] [type_, L_]] [[Val] [val, rc]]) {
+    Val:val_here = func arg [0];
+    Val:rc_here = func arg [1];
+    if_ [[rc_here] eq [c L_ [0]]];
+        if ([type_.name] equals ["Array"]) {
+            [val_here]._ref_free_array;
+        } else {
+            Struct_?:maybe_struct = [type_].get_struct;
+
+            if (maybe_struct) {
+                [val_here]._ref_free_struct;
+            } else {
+                abort "Don't know how to ref free val of type_ {}" % [type_].stringify;
+            };
+        };
+    end block;
+    ret void;
+end fn;
+};
+}
+
+#<Val:val>._ref_free_array {
+    assert [val] is array;
+
+    Type_:sub = val.type_.generics[0];
+
+    Val:content = load [[val].content];
+    if ([sub].is_ref) {
+    Val:len = load [[val].length];
+    Label:check = new label;
+    Label:loop = new label;
+    Label:final = new label;
+
+    PHINode:i_phi = new PHI [L_];
+
+    Val:initial_i = c L_ [0];
+    [i_phi].add_incoming[initial_i];
+
+    goto_ [check];
+
+[check]:;
+    Val:i = [i_phi].place_here;
+    goto_ [[i] lt [len]] ? [loop] : [final];
+
+[loop]:;
+    [load [[content].idx[i]]].decr_ref;
+    Val:new_i = [i] + [c L_ [1]];
+    [i_phi].add_incoming[new_i];
+    goto_ [check];
+
+[final]:;
+    };
+
+    free [content];
+    free [val];
+}
+
+#<Val:val>._ref_free_struct {
+    Struct_:struct_ = assert [val] is ref struct_;
+    for (L:i enumerating struct_.fields) {
+        [load [[val].[i]]].decr_ref;
+    };
+    free [val];
+}

@@ -1,0 +1,4 @@
+{
+    "command_options": ["-t", "package-obj"], 
+    "libraries": ["../EPSL-IR-Gen/irgen"]
+}

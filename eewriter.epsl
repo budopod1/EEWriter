@@ -1,0 +1,1016 @@
+#import irgen;
+#import inner;
+#import wrapper;
+
+Val {
+    Type_:type_,
+    BasicVal?:basic,
+    AssignableVal?:assignable,
+    GlobalPtrVal?:global_ptr
+}
+
+BasicVal {
+    IRValue:val,
+    IRBasicBlock:bb
+}
+
+AssignableVal {
+    IRValue:addr
+}
+
+GlobalPtrVal {
+    IRValue:addr
+}
+
+PHINode {
+    Type_:type_,
+    IRPHIInstruction:ir,
+    IRRegister:register
+}
+
+Struct_ {
+    Str:id,
+    Bool:is_ref,
+    [Field]:fields
+}
+
+Field {
+    Str:name,
+    Type_:type_
+}
+
+Block {
+    IRBasicBlock:entry,
+    IRBasicBlock:otherwise,
+    IRBasicBlock:end
+}
+
+Label {
+    IRBasicBlock:block
+}
+
+#start irgen <Str:filename> {
+    init state [filename];
+}
+
+Str#get filename {
+    return get state.filename;
+}
+
+#end irgen {
+    println[[build module].stringify];
+    clear state;
+}
+
+Type_ {
+    Str:name,
+    Z:bits, // -1 indicates null
+    [Type_]:generics
+}
+
+// FIXME: once the `deep equals` builtin is implemented, this function won't be needed
+Bool#<Type_:a> == <Type_:b> {
+    if ([a.name] not equals [b.name]) {
+        return false;
+    };
+    if (a.bits != b.bits) {
+        return false;
+    };
+    if ([a.generics].len != [b.generics].len) {
+        return false;
+    };
+    for (W:i enumerating a.generics) {
+        if (![a.generics[i]] == [b.generics[i]]) {
+            return false;
+        };
+    };
+    return true;
+}
+
+Bool#<Type_?:a> == <Type_?:b> {
+    if (a && b) {
+        return [[a].unwrap] == [[b].unwrap];
+    } else {
+        return [a].is_null && [b].is_null;
+    };
+}
+
+Type_#Bool_ {
+    return Type_ ["Bool", 1, [Type_] []];
+}
+
+Type_#Byte_ {
+    return Type_ ["Byte", 8, [Type_] []];
+}
+
+Type_#W_ {
+    return Type_ ["W", 32, [Type_] []];
+}
+
+Type_#Z_ {
+    return Type_ ["Z", 32, [Type_] []];
+}
+
+Type_#Q_ {
+    return Type_ ["Q", 64, [Type_] []];
+}
+
+Type_#W_ <W:bits> {
+    return Type_ ["W", bits, [Type_] []];
+}
+
+Type_#L_ {
+    return W_ [64];
+}
+
+Type_#Z_ <W:bits> {
+    return Type_ ["Z", bits, [Type_] []];
+}
+
+Type_#Q_ <W:bits> {
+    return Type_ ["Q", bits, [Type_] []];
+}
+
+Type_#Optional_ <Type_:sub> {
+    return Type_ ["Optional", -1, [Type_] [sub]];
+}
+
+Type_#Array_ <Type_:sub> {
+    return Type_ ["Array", -1, [Type_] [sub]];
+}
+
+// a small extension to the Epsilon type_ system
+Type_#Pointer <Type_:sub> {
+    return Type_ ["Pointer", -1, [Type_] [sub]];
+}
+
+Type_#T_ <Str:name> {
+    return Type_ [name, -1, [Type_] []];
+}
+
+Type_#Internal_ {
+    return T_ ["Internal"];
+}
+
+#<Struct_:struct_>.register {
+    [get state.structs].append[struct_];
+}
+
+Struct_?#<Type_:type_>.get_struct {
+    for (Struct_:struct_ in get state.structs) {
+        if ([struct_.id] equals [type_.name]) {
+            return struct_;
+        };
+    };
+    return null;
+}
+
+Str#<Type_:type_>.stringify {
+    Str:generic_txt = "";
+    for (Type_:generic in type_.generics) {
+        if ([generic_txt].len) {
+            [generic_txt].extend[", "];
+        };
+        [generic_txt].extend[[generic].stringify];
+    };
+    
+    if (type_.bits == -1) {
+        return "{} <{}>" % type_.name % generic_txt;
+    } else {
+        return "{} {} <{}>" % type_.name % type_.bits % generic_txt;
+    };
+}
+
+Val#c <Bool:val> {
+    return basic val [Bool_][make const [val]];
+}
+
+Val#c <W:val> {
+    return basic val [W_][make const [val]];
+}
+
+Val#c L_ <W:val> {
+    return basic val [L_][make const [val] [64]];
+}
+
+Val#c <Z:val> {
+    return basic val [Z_][make const [val]];
+}
+
+Val#c <Q:val> {
+    return basic val [Q_][make const [val]];
+}
+
+Val#c null_ <Type_:type_> {
+    return basic val [type_][make const null_];
+}
+
+Val#c null_ {
+    return c null_ [Internal_];
+}
+
+Bool#<Type_:type_>.is_signed_int {
+    return [type_.name] equals ["Z"];
+}
+
+Bool#<Type_:type_>.is_unsigned_int {
+    Str:name = type_.name;
+    return ([name] equals ["Bool"]) || ([name] equals ["Byte"]) || ([name] equals ["W"]);
+}
+
+Bool#<Type_:type_>.is_int {
+    return [type_].is_signed_int || [type_].is_unsigned_int;
+}
+
+Bool#<Type_:type_>.is_float {
+    return [type_.name] equals ["Q"];
+}
+
+Bool#<Type_:type_>.is_nullable {
+    return ([type_.name] equals ["Optional"]) || ([type_.name] equals ["Null"]);
+}
+
+Bool#<Type_:type_>.is_ref {
+    if ([type_.name] equals ["Optional"]) {
+        return [type_.generics[0]].is_ref;
+    };
+    if ([type_.name] equals ["Array"]) {
+        return true;
+    };
+    Struct_?:struct_ = [type_].get_struct;
+    if ([struct_].is_null) {
+        return false;
+    };
+    return [struct_].unwrap.is_ref;
+}
+
+#assert <Val:val> is array {
+    if ([val.type_.name] not equals ["Array"]) {
+        abort "Expected type_ Array, found {}" % [val.type_].stringify;
+    };
+}
+
+Struct_#assert <Type_:val> is struct_ {
+    Struct_?:maybe_struct = [val].get_struct;
+    if ([maybe_struct].is_null) {
+        abort "Expected value with a struct type_, found a value of type_ {}" % [val].stringify;
+    };
+    return [maybe_struct].unwrap;
+}
+
+Struct_#assert <Val:val> is struct_ {
+    return assert [val.type_] is struct_;
+}
+
+Struct_#assert <Type_:val> is ref struct_ {
+    Struct_:struct_ = assert [val] is struct_;
+    if (!struct_.is_ref) {
+        abort "Expected value with a ref struct type_, found a value of type_ {}" % [val].stringify;
+    };
+    return struct_;
+}
+
+Struct_#assert <Val:val> is ref struct_ {
+    return assert [val.type_] is ref struct_;
+}
+
+Struct_#assert <Type_:val> is nonref struct_ {
+    Struct_:struct_ = assert [val] is struct_;
+    if (struct_.is_ref) {
+        abort "Expected value with a nonref struct type_, found a value of type_ {}" % [val].stringify;
+    };
+    return struct_;
+}
+
+Struct_#assert <Val:val> is nonref struct_ {
+    return assert [val.type_] is nonref struct_;
+}
+
+Type_#unwrap nullability <Type_:val> {
+    if ([val.name] equals ["Optional"]) {
+        return val.generics[0];
+    } else {
+        return val;
+    };
+}
+
+Type_#unwrap nullability <Val:val> {
+    return unwrap nullability [val.type_];
+}
+
+#assert <Val:val> is nullable {
+    if (![val.type_].is_nullable) {
+        abort "Val of type_ {} is never null" % [val.type_].stringify;
+    };
+}
+
+#assert <Val:val> is nonnullable {
+    if ([val.type_].is_nullable) {
+        abort "Val of type_ {} may be null" % [val.type_].stringify;
+    };
+}
+
+#assert <Val:val> is ref {
+    if (![val.type_].is_ref) {
+        abort "Val of type_ {} is not a ref type_" % [val.type_].stringify;
+    };
+}
+
+#assert type_ equality <Val:a>, <Val:b> {
+    assert type_ equality [a.type_], [b.type_];
+}
+
+#assert type_ equality <Type_:a>, <Type_:b> {
+    if (![a] == [b]) {
+        abort "Expected equal types_, found {} and {}" % [a].stringify % [b].stringify;
+    };
+}
+
+Val#cast <Val:val> to <Type_:type_> {
+    return basic val [type_] [cast [[val].get] from [val.type_] to [type_]];
+}
+
+Val#bitcast <Val:val> to <Type_:type_> {
+    return basic val [type_] [[val].get];
+}
+
+Val#<Val:val>.truth_value {
+    return basic val [Bool_] [compute truth value [val.type_] [[val].get]];
+}
+
+Val#<Val:val>.untruth_value {
+    return basic val [Bool_] [compute untruth value [val.type_] [[val].get]];
+}
+
+Val#NOT <Val:val> {
+    return basic val [val.type_] [bitwise not [val.type_] [[val].get]];
+}
+
+Val#<Val:a> AND <Val:b> {
+    assert type_ equality [a], [b];
+    return basic val [a.type_] [emit [[[a].get] AND [[b].get] to [[a.type_].ir]]];
+}
+
+Val#<Val:a> OR <Val:b> {
+    assert type_ equality [a], [b];
+    return basic val [a.type_] [emit [[[a].get] OR [[b].get] to [[a.type_].ir]]];
+}
+
+Val#<Val:a> XOR <Val:b> {
+    assert type_ equality [a], [b];
+    return basic val [a.type_] [emit [[[a].get] XOR [[b].get] to [[a.type_].ir]]];
+}
+
+Val#<Val:a> + <Val:b> {
+    assert type_ equality [a], [b];
+    if ([a.type_].is_int) {
+        return basic val [a.type_] [emit [[[a].get] add [[b].get] to [[a.type_].ir]]];
+    } else {
+        return basic val [a.type_] [emit [[[a].get] fadd [[b].get] to [[a.type_].ir]]];
+    };
+}
+
+Val#<Val:a> - <Val:b> {
+    assert type_ equality [a], [b];
+    if ([a.type_].is_int) {
+        return basic val [a.type_] [emit [[[a].get] sub [[b].get] to [[a.type_].ir]]];
+    } else {
+        return basic val [a.type_] [emit [[[a].get] fsub [[b].get] to [[a.type_].ir]]];
+    };
+}
+
+Val#<Val:a> * <Val:b> {
+    assert type_ equality [a], [b];
+    if ([a.type_].is_int) {
+        return basic val [a.type_] [emit [[[a].get] mul [[b].get] to [[a.type_].ir]]];
+    } else {
+        return basic val [a.type_] [emit [[[a].get] fmul [[b].get] to [[a.type_].ir]]];
+    };
+}
+
+Val#<Val:a> / <Val:b> {
+    assert type_ equality [a], [b];
+    if ([a.type_].is_unsigned_int) {
+        return basic val [a.type_] [emit [[[a].get] udiv [[b].get] to [[a.type_].ir]]];
+    } elif ([a.type_].is_signed_int) {
+        return basic val [a.type_] [emit [[[a].get] sdiv [[b].get] to [[a.type_].ir]]];
+    } else {
+        return basic val [a.type_] [emit [[[a].get] fdiv [[b].get] to [[a.type_].ir]]];
+    };
+}
+
+Val#<Val:a> % <Val:b> {
+    assert type_ equality [a], [b];
+    if ([a.type_].is_unsigned_int) {
+        return basic val [a.type_] [emit [[[a].get] umod [[b].get] to [[a.type_].ir]]];
+    } elif ([a.type_].is_signed_int) {
+        return basic val [a.type_] [emit [[[a].get] smod [[b].get] to [[a.type_].ir]]];
+    } else {
+        return basic val [a.type_] [emit [[[a].get] fmod [[b].get] to [[a.type_].ir]]];
+    };
+}
+
+Val#negate <Val:val> {
+    if ([val.type_].is_int) {
+        return basic val [val.type_] [emit [[make const [(Z)0]] sub [[val].get] to [[val.type_].ir]]];
+    } else {
+        return basic val [val.type_] [emit [fneg [[val].get]]];
+    };
+}
+
+Val#<Val:a> eq <Val:b> {
+    return do_Val_cmp[a]["eq"][b];
+}
+
+Val#<Val:a> gt <Val:b> {
+    return do_Val_cmp[a]["gt"][b];
+}
+
+Val#<Val:a> ge <Val:b> {
+    return do_Val_cmp[a]["ge"][b];
+}
+
+Val#<Val:a> lt <Val:b> {
+    return do_Val_cmp[a]["lt"][b];
+}
+
+Val#<Val:a> le <Val:b> {
+    return do_Val_cmp[a]["le"][b];
+}
+
+Val#<Val:a> ne <Val:b> {
+    return do_Val_cmp[a]["ne"][b];
+}
+
+Val#<Val:a> shift left <Val:b> {
+    if (![a.type_].is_int || ![b.type_].is_int) {
+        abort "Bitshift operations require both types to be an int";
+    };
+    if (a.type_.bits != b.type_.bits) {
+        abort "Both operands in a bitshift must have the same number of bits";
+    };
+    
+    return basic val [a.type_] [emit [[[a].get] left shift [[b].get] to [[a.type_].ir]]];
+}
+
+Val#<Val:a> shift right <Val:b> {
+    if (![a.type_].is_int || ![b.type_].is_int) {
+        abort "Bitshift operations require both types to be an int";
+    };
+    if (a.type_.bits != b.type_.bits) {
+        abort "Both operands in a bitshift must have the same number of bits";
+    };
+    
+    if ([a.type_].is_signed_int) {
+        return basic val [a.type_] [emit [[[a].get] signed right shift [[b].get] to [[a.type_].ir]]];
+    } else {
+        return basic val [a.type_] [emit [[[a].get] unsigned right shift [[b].get] to [[a.type_].ir]]];
+    };
+}
+
+Val#&<Val:v> {
+    return basic val [Pointer [v.type_]] [[v.assignable].unwrap.addr];
+}
+
+Val#*<Val:val> {
+    if ([val.type_.name] not equals ["Pointer"]) {
+        abort "Can only directly dereference Pointer type_, not {}" % [val.type_].stringify;
+    };
+    return assignable val [val.type_.generics[0]] [[val].get];
+}
+
+Val#*<Type_:type_><Val:val> {
+    return assignable val [type_] [[val].get];
+}
+
+Val#load <Val:val> {
+    return basic val [val.type_] [[val].get];
+}
+
+#<Val:assignable> = <Val:val> {
+    if (![val.type_] == [assignable.type_]) {
+        abort "Cannot assign value of type_ {} to assignable of type_ {}" % [val.type_].stringify % [assignable.type_].stringify;
+    };
+
+    if (assignable.assignable) {
+        emit [store [[val].get] in [[assignable.assignable].unwrap.addr]];
+    } else {
+        abort "Expected assignable";
+    };
+}
+
+Val#var <Type_:type_> {
+    return assignable val [type_] [emit [alloca [[type_].ir]]];
+}
+
+Val#var <Type_:type_> <Val:init> {
+    Val:var = var [type_];
+    [var] = [init];
+    return var;
+}
+
+Val#var <Val:init> {
+    return var [init.type_] [init];
+}
+
+#extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
+    require extern fn [ret_type_] [name] [arg_types_] [false];
+}
+
+#extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> vargs {
+    require extern fn [ret_type_] [name] [arg_types_] [true];
+}
+
+#extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args> {
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false];
+    call [func] [provided_args];
+}
+
+#extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> vargs <[Val]:provided_args> {
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true];
+    call [func] [provided_args];
+}
+
+Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
+    if (defined fn [ret_type_] [name] [arg_types_]) {
+        return false;
+    } else {
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_];
+        add fn [new_fn];
+        return true;
+    };
+}
+
+Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args> {
+    Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
+    if (defined_fn) {
+        call [[defined_fn].unwrap.base] [provided_args];
+        return false;
+    } else {
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_];
+        call [new_fn.base] [provided_args];
+        add fn [new_fn];
+        return true;
+    };
+}
+
+#ret void {
+    emit [ret void instruction];
+}
+
+#ret <Val:val> {
+    emit [ret [[val].get]];
+}
+
+#mark as unreachable {
+    emit [unreachable instruction];
+}
+
+#end fn {
+    require basic block termination;
+    [Func_]:func_stack = get state.func_stack;
+    [func_stack].pop[[func_stack].len-1];
+}
+
+Val#func ret {
+    Val?:ret = get active func.last_ret_val;
+    if ([ret].is_null) {
+        abort "The current function has not called another function";
+    };
+    return [ret].unwrap;
+}
+
+Val#func arg <L:i> {
+    Type_:type_ = get active func.base.args[i];
+    return basic val [type_] [make_val [IRRegister [false, "arg{}" % i, [type_].ir]]];
+}
+
+Val#alloca <Val:count> <Type_:type_> {
+    return assignable val [type_] [emit [alloca [[count].get] [[type_].ir]]];
+}
+
+Block#current block {
+    [Block]:block_stack = get active func.block_stack;
+    return block_stack[[block_stack].len-1];
+}
+
+#break_ <Block:block> {
+    emit [branch to [block.otherwise]];
+}
+
+#continue_ <Block:block> {
+    emit [branch to [block.entry]];
+}
+
+#end block {
+    Block:block = pop from block stack;
+    emit [branch to [block.end]] unless terminated;
+    set current bb [block.otherwise];
+}
+
+Label#new label {
+    return Label [new bb];
+}
+
+#<Label:label>: {
+    emit [branch to [label.block]] unless terminated;
+    set current bb [label.block];
+}
+
+Label#new label: {
+    IRBasicBlock:bb = new bb;
+    emit [branch to [bb]] unless terminated;
+    set current bb [bb];
+    return Label [bb];
+}
+
+#goto_ <Label:label> {
+    emit [branch to [label.block]];
+}
+
+#goto_ <Val:cond> ? <Label:if_true> : <Label:if_false> {
+    IRValue:cond_bool = compute truth value [cond.type_] [[cond].get];
+    emit [branch to [if_true.block] if_ [cond_bool] else_ [if_false.block]];
+}
+
+#if_ <Val:cond> {
+    IRBasicBlock:entry = new bb;
+    IRBasicBlock:otherwise = new bb;
+    IRValue:cond_bool = compute truth value [cond.type_] [[cond].get];
+    emit [branch to [entry] if_ [cond_bool] else_ [otherwise]];
+    add block [Block [entry, otherwise, otherwise]] to stack;
+    set current bb [entry];
+}
+
+#else_ {
+    IRBasicBlock:otherwise = pop from block stack.otherwise;
+    IRBasicBlock:end = new bb;
+    add block [Block [otherwise, end, end]] to stack;
+    emit [branch to [end]] unless terminated;
+    set current bb [otherwise];
+}
+
+#while <Val:cond> from <Label:label> {
+    IRBasicBlock:entry = label.block;
+    IRBasicBlock:body = new bb;
+    IRBasicBlock:otherwise = new bb;
+    IRValue:cond_bool = compute truth value [cond.type_] [[cond].get];
+    emit [branch to [body] if_ [cond_bool] else_ [otherwise]];
+    add block [Block [entry, otherwise, entry]] to stack;
+    set current bb [body];
+}
+
+#start block <Block:block> {
+    require basic block termination;
+    add block [block] to stack;
+    set current bb [block.entry];
+}
+
+Block#create block with entry <Label:entry>, otherwise <Label:otherwise>, ending with <Label:end> {
+    return Block [entry.block, otherwise.block, end.block];
+}
+
+PHINode#new PHI <Type_:type_> {
+    return PHINode [type_, IRPHIInstruction [[IRValue] [], [W] []], new register [[type_].ir]];
+}
+
+#<PHINode:phi>.add_incoming<Val:val> {
+    if (![val.type_] == [phi.type_]) {
+        abort "Incorrect type_ for PHI operand: expected {}, found {}" % [phi.type_].stringify % [val.type_].stringify;
+    };
+    if (val.basic) {
+        BasicVal:basic = [val.basic].unwrap;
+        [phi.ir.vals].append[basic.val];
+        [phi.ir.block_ids].append[basic.bb.id];
+    } else {
+        abort "Expected BasicVal";
+    };
+}
+
+Val#<PHINode:phi>.place_here {
+    emit [wrap PHI [phi.register] [phi.ir]];
+    return [phi].val;
+}
+
+Val#<PHINode:phi>.val {
+    return basic val [phi.type_] [make_val [phi.register]];
+}
+
+// always evaluates both operands
+Val#<Val:cond> ? <Val:if_true> : <Val:if_false> {
+    assert type_ equality [if_true], [if_false];
+    IRValue:ir_cond = compute truth value [cond.type_] [[cond].get];
+    return basic val [if_true.type_] [emit [
+        select [[if_true.type_].ir] [[if_true].get] if_ [ir_cond] else_ [[if_false].get]
+    ]];
+}
+
+Val#<Val:ptr> shifted by <Val:offset> {
+    IRType:pointee = [ptr.type_].pointee;
+    IRValuedInstruction:GEP = GEP [pointee] [[ptr].get] [[IRValue] [[offset].get]];
+    return basic val [ptr.type_] [emit [GEP]];
+}
+
+Val#sizeof <Type_:type_> {
+    IRValue:ptr = [[c null_ [Pointer [type_]]] shifted by [c L_[1]]].get;
+    return basic val [L_] [emit [ptr [ptr] to int [int type [64]]]];
+}
+
+Val#sizeof pointee <Type_:type_> {
+    IRValue:ptr = [[c null_ [type_]] shifted by [c L_[1]]].get;
+    return basic val [L_] [emit [ptr [ptr] to int [int type [64]]]];
+}
+
+Val#malloc <Val:bytes> {
+    extern fn [Internal_] ["malloc"] [[Type_] [L_]] [[Val] [cast [bytes] to [L_]]];
+    return func ret;
+}
+
+Val#malloc <Type_:type_> {
+    return cast [malloc [sizeof [type_]]] to [Pointer [type_]];
+}
+
+Val#malloc <Val:count> <Type_:type_> {
+    return cast [malloc [[sizeof [type_]] * [cast [count] to [L_]]]] to [Pointer [type_]];
+}
+
+Val#malloc pointee <Type_:type_> {
+    return cast [malloc [sizeof pointee [type_]]] to [type_];
+}
+
+Val#malloc pointee <Val:count> <Type_:type_> {
+    return cast [malloc [[sizeof pointee [type_]] * [cast [count] to [L_]]]] to [type_];
+}
+
+#free <Val:val> {
+    extern fn [null] ["free"] [[Type_] [Internal_]] [[Val] [cast [val] to [Internal_]]];
+}
+
+Val#memcmp <Val:v1> <Val:v2> <Val:count> {
+    if (![v1.type_] == [v2.type_]) {
+        abort "Can only memcmp equal types_";
+    };
+    extern fn [Z_] ["memcmp"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
+        cast [v1] to [Internal_], cast [v2] to [Internal_], 
+        [sizeof pointee [v1.type_]] * [cast [count] to [L_]]
+    ]];
+    return func ret;
+}
+
+Val#memcmp <Val:v1> <Val:v2> {
+    if (![v1.type_] == [v2.type_]) {
+        abort "Can only memcmp equal types_";
+    };
+    extern fn [Z_] ["memcmp"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
+        cast [v1] to [Internal_], cast [v2] to [Internal_], sizeof pointee [v1.type_]
+    ]];
+    return func ret;
+}
+
+#memcpy <Val:count> <Val:v1> to <Val:v2> {
+    extern fn [null] ["memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
+        cast [v2] to [Internal_], cast [v1] to [Internal_], 
+        [sizeof pointee [v1.type_]] * [cast [count] to [L_]]
+    ]];
+}
+
+#memcpy <Val:v1> to <Val:v2> {
+    extern fn [null] ["memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
+        cast [v2] to [Internal_], cast [v1] to [Internal_], sizeof pointee [v1.type_]
+    ]];
+}
+
+#assume <Val:val> {
+    if (![val.type_] == [Bool_]) {
+        abort "Can only assume that a boolean is true, not a {}" % [val.type_].stringify;
+    };
+    extern fn [null] ["llvm.assume"] [[Type_] [Bool_]] [[Val] [val]];
+}
+
+// returns the val with the expectation attached
+Val#expect <Val:val> to be <Bool:truth_value> {
+    if (![val.type_] == [Bool_]) {
+        abort "Can only provide an expectation of a boolean's value, found a {}" % [val.type_].stringify;
+    };
+    extern fn [Bool_] ["llvm.expect.i1"] [[Type_] [Bool_, Bool_]] [[Val] [val, c [truth_value]]];
+    return func ret;
+}
+
+Val#<Val:arr>.capacity {
+    assert [arr] is array;
+    return *[access field [1] of [arr] as [L_]];
+}
+
+Val#<Val:arr>.length {
+    assert [arr] is array;
+    return *[access field [2] of [arr] as [L_]];
+}
+
+Val#<Val:arr>.content {
+    assert [arr] is array;
+    return *[access field [3] of [arr] as [Pointer [arr.type_.generics[0]]]];
+}
+
+Val#<Val:val>.idx<Val:idx> {
+    if ([val.type_.name] equals ["Array"]) {
+        return [[val].content].idx[idx];
+    } elif ([val.type_.name] equals ["Pointer"]) {
+        return *[[val] shifted by [idx]];
+    } else {
+        abort "Cannot index into value of type_ {}" % [val.type_].stringify;
+    };
+}
+
+Val#<Val:val>.<L:field> {
+    Struct_:struct_ = assert [val] is ref struct_;
+    // +1 because of the refCounter field
+    return *[access field [field+1] of [val] as [struct_.fields[field].type_]];
+}
+
+Val#<Val:val>.<Str:field> {
+    Struct_:struct_ = assert [val] is ref struct_;
+    L:field_idx = index of field [field] in [struct_];
+    // +1 because of the refCounter field
+    return *[access field [field_idx+1] of [val] as [struct_.fields[field_idx].type_]];
+}
+
+Val#get field <Str:field> of <Val:val> {
+    Struct_:struct_ = assert [val] is nonref struct_;
+    L:field_idx = index of field [field] in [struct_];
+    Type_:field_type_ = struct_.fields[field_idx].type_;
+    return basic val [field_type_] [emit [
+        extract value [[val].get] [[W] [field_idx]] [[field_type_].ir]
+    ]];
+}
+
+Val#with field <Str:field> of <Val:val> as <Val:new_> {
+    Struct_:struct_ = assert [val] is nonref struct_;
+    L:field_idx = index of field [field] in [struct_];
+    Type_:field_type_ = struct_.fields[field_idx].type_;
+    if (![new_.type_] == [field_type_]) {
+        abort "Field {} has type_ {}, cannot insert value of type_ {}" % field % [field_type_].stringify % [new_.type_].stringify;
+    };
+    return basic val [field_type_] [emit [
+        insert value [[new_].get] [[val].get] [[W] [field_idx]]
+    ]];
+}
+
+Val#make global <Type_:type_> <Str?:name> <Val?:init> {
+    IRConstant?:const_init = null;
+    if (init) {
+        const_init = get_const_from_val[[init].unwrap];
+    };
+    return assignable val [type_] [make_global[[type_].ir][name][const_init][null][false]];
+}
+
+Val#make const <Type_:type_> <Str?:name> <Val:init> {
+    return assignable val [type_] [
+        make_global[[type_].ir][name][get_const_from_val[init]][null][true]
+    ];
+}
+
+Val#const str <Str:str> {
+    return global ptr val [Pointer [Byte_]] [
+        make_global[array type [[str].len]x[int type [8]]][null][null][str][true]
+    ];
+}
+
+Val#mut str <Str:str> <W:extra_cap> {
+    Val:result = malloc [c [[str].len + extra_cap]];
+    memcpy [c [[str].len]] [const str [str]] to [result];
+    return result;
+}
+
+Val#new array <Type_:type_> <[Val]:vals> with capacity <L:capacity> {
+    if ([type_.name] not equals ["Array"]) {
+        abort "Expected Array type_, found {}" % [type_].stringify;
+    };
+
+    Val:result = malloc pointee [type_];
+    [result].init_ref;
+    
+    if (capacity < [vals].len) {
+        capacity = [vals].len;
+    };
+    if (capacity < 0) {
+        capacity = 1;
+    };
+    [[result].capacity] = [c L_ [capacity]];
+
+    [[result].length] = [c L_ [[vals].len]];
+
+    Val:content = malloc [c [capacity]] [type_.generics[0]];
+    for (L:i enumerating vals) {
+        [[content].idx[c [i]]] = [vals[i]];
+    };
+    [[result].content] = [content];
+    
+    return result;
+}
+
+Val#new array <Type_:type_> <[Val]:vals> {
+    return new array [type_] [vals] with capacity [0];
+}
+
+Val#new ref struct_ <Type_:type_> <[Val]:fields> {
+    Struct_?:maybe_struct = [type_].get_struct;
+    if ([maybe_struct].is_null) {
+        abort "Expected struct type_, found {}" % type_.name;
+    };
+    
+    Struct_:struct_ = [maybe_struct].unwrap;
+    if (!struct_.is_ref) {
+        abort "Expected ref struct type_, found {}" % struct_.id;
+    };
+
+    Val:result = malloc pointee [type_];
+    [result].init_ref;
+    
+    for (L:i enumerating fields) {
+        Val:field_val = fields[i];
+        Field:struct_field = struct_.fields[i];
+        if (![field_val.type_] == [struct_field.type_]) {
+            abort "Expected value of type_ {} for field {}, found value of type_ {}" % [struct_field.type_].stringify % struct_field.name % [field_val.type_].stringify;
+        };
+        [[result].[i]] = [field_val];
+    };
+    
+    return result;
+}
+
+Val#<Val:val> == null_ {
+    assert [val] is nullable;
+    return basic val [Bool_] [emit [compare int [[val].get] ["eq"] [make const null_]]];
+}
+
+Val#<Val:val> != null_ {
+    assert [val] is nullable;
+    return basic val [Bool_] [emit [compare int [[val].get] ["ne"] [make const null_]]];
+}
+
+#<Val:val>.init_ref {
+    assert [val] is nonnullable;
+    assert [val] is ref;
+    [*[access field [0] of [val] as [L_]]] = [c L_ [0]];
+}
+
+#<Val:val>.incr_ref {
+    if (![val.type_].is_ref) {
+        return;
+    };
+    val = load [val];
+    if ([val.type_].is_nullable) {
+        if_ [[val] != null_];
+    };
+    Val:rc = *[bitcast [val] to [Pointer [L_]]];
+    [rc] = [[rc] + [c L_ [1]]];
+    if ([val.type_].is_nullable) {
+        end block;
+    };
+}
+
+#<Val:val>.checkless_decr_ref {
+    if (![val.type_].is_ref) {
+        return;
+    };
+    val = load [val];
+    if ([val.type_].is_nullable) {
+        if_ [[val] != null_];
+    };
+    Val:rc = *[bitcast [val] to [Pointer [L_]]];
+    [rc] = [[rc] - [c L_ [1]]];
+    if ([val.type_].is_nullable) {
+        end block;
+    };
+}
+
+#<Val:val>.decr_ref {
+    if (![val.type_].is_ref) {
+        return;
+    };
+    val = load [val];
+    if ([val.type_].is_nullable) {
+        if_ [[val] != null_];
+    };
+    Val:rc = *[bitcast [val] to [Pointer [L_]]];
+    [rc] = [[rc] - [c L_ [1]]];
+    [bitcast [val] to [unwrap nullability [val]]]._nonnull_check_ref[rc];
+    if ([val.type_].is_nullable) {
+        end block;
+    };
+}
+
+#<Val:val>.check_ref {
+    if (![val.type_].is_ref) {
+        return;
+    };
+    val = load [val];
+    if ([val.type_].is_nullable) {
+        if_ [[val] != null_];
+    };
+    Val:rc = *[bitcast [val] to [Pointer [L_]]];
+    [bitcast [val] to [unwrap nullability [val]]]._nonnull_check_ref[rc];
+    if ([val.type_].is_nullable) {
+        end block;
+    };
+}
