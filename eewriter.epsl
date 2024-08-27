@@ -6,7 +6,7 @@ Val {
     Type_:type_,
     BasicVal?:basic,
     AssignableVal?:assignable,
-    GlobalPtrVal?:global_ptr
+    ConstVal?:const,
 }
 
 BasicVal {
@@ -18,8 +18,8 @@ AssignableVal {
     IRValue:addr
 }
 
-GlobalPtrVal {
-    IRValue:addr
+ConstVal {
+    IRValue:val
 }
 
 PHINode {
@@ -30,6 +30,8 @@ PHINode {
 
 Struct_ {
     Str:id,
+    Str:name,
+    Str:symbol,
     Bool:is_ref,
     [Field]:fields
 }
@@ -49,6 +51,12 @@ Label {
     IRBasicBlock:block
 }
 
+ExternFunc {
+    IRFunc:ir_func,
+    Type_?:ret_type_,
+    [Type_]:args
+}
+
 #start irgen <Str:filename> {
     init state [filename];
 }
@@ -57,9 +65,10 @@ Str#get filename {
     return get state.filename;
 }
 
-#end irgen {
-    println[[build module].stringify];
+Str#end irgen {
+    Str:result = [build module].stringify;
     clear state;
+    return result;
 }
 
 Type_ {
@@ -182,31 +191,43 @@ Str#<Type_:type_>.stringify {
 }
 
 Val#c <Bool:val> {
-    return basic val [Bool_][make const [val]];
+    return const val [Bool_][make const [val]];
 }
 
 Val#c <W:val> {
-    return basic val [W_][make const [val]];
+    return const val [W_][make const [val]];
 }
 
 Val#c L_ <W:val> {
-    return basic val [L_][make const [val] [64]];
+    return const val [L_][make const [val] [64]];
 }
 
 Val#c <Z:val> {
-    return basic val [Z_][make const [val]];
+    return const val [Z_][make const [val]];
 }
 
 Val#c <Q:val> {
-    return basic val [Q_][make const [val]];
+    return const val [Q_][make const [val]];
 }
 
 Val#c null_ <Type_:type_> {
-    return basic val [type_][make const null_];
+    return const val [type_][make const null_];
 }
 
 Val#c null_ {
     return c null_ [Internal_];
+}
+
+Val#c <Z:val> <Type_:type_> {
+    if ([type_].is_float) {
+        return const val [type_][make const [val] [(W)type_.bits]];
+    } else {
+        return c [(Q)val] [type_];
+    };
+}
+
+Val#c <Q:val> <Type_:type_> {
+    return const val [type_][make const [val] [(W)type_.bits]];
 }
 
 Bool#<Type_:type_>.is_signed_int {
@@ -513,12 +534,40 @@ Val#var <Val:init> {
     return var [init.type_] [init];
 }
 
+ExternFunc#get fn <Str:name> {
+    ExternFunc?:fn = get func named [name];
+    if ([fn].is_null) {
+        abort "Cannot find function with requested name {}" % name;
+    };
+    return [fn].unwrap;
+}
+
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
     require extern fn [ret_type_] [name] [arg_types_] [false];
 }
 
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> vargs {
     require extern fn [ret_type_] [name] [arg_types_] [true];
+}
+
+#call <ExternFunc:func> <[Val]:args> {
+    [IRValue]:arg_vals = [IRValue] [];
+    for (W:i enumerating args) {
+        if (![args[i].type_] == [func.args[i]]) {
+            abort "Incorrect type_ passed as argument to function";
+        };
+        [arg_vals].append[[args[i]].get];
+    };
+
+    W:varg_count = [args].len - [func.args].len;
+    
+    if (func.ret_type_) {
+        Type_:ret_type_ = [func.ret_type_].unwrap;
+        IRValue:result = emit [call [[ret_type_].ir] [func.ir_func.name] [arg_vals] [varg_count]];
+        get active func.last_ret_val = basic val [ret_type_] [result];
+    } else {
+        emit [call void [func.ir_func.name] [arg_vals] [varg_count]];
+    };
 }
 
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args> {
@@ -592,6 +641,10 @@ Val#alloca <Val:count> <Type_:type_> {
 Block#current block {
     [Block]:block_stack = get active func.block_stack;
     return block_stack[[block_stack].len-1];
+}
+
+Bool#is block terminated {
+    return current bb.is_terminated;
 }
 
 #break_ <Block:block> {
@@ -870,8 +923,9 @@ Val#make const <Type_:type_> <Str?:name> <Val:init> {
 }
 
 Val#const str <Str:str> {
-    return global ptr val [Pointer [Byte_]] [
-        make_global[array type [[str].len]x[int type [8]]][null][null][str][true]
+    IRType:type = array type [[str].len]x[int type [8]];
+    return const val [Pointer [Byte_]] [
+        make_global[type][null][null][str][true]
     ];
 }
 
@@ -993,8 +1047,9 @@ Val#<Val:val> != null_ {
         if_ [[val] != null_];
     };
     Val:rc = *[bitcast [val] to [Pointer [L_]]];
-    [rc] = [[rc] - [c L_ [1]]];
-    [bitcast [val] to [unwrap nullability [val]]]._nonnull_check_ref[rc];
+    Val:new_rc = [rc] - [c L_ [1]];
+    [rc] = [new_rc];
+    [bitcast [val] to [unwrap nullability [val]]]._nonnull_check_ref[new_rc];
     if ([val.type_].is_nullable) {
         end block;
     };

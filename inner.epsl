@@ -19,12 +19,6 @@ Func_ {
     Val?:last_ret_val
 }
 
-ExternFunc {
-    IRFunc:ir_func,
-    Type_?:ret_type_,
-    [Type_]:args
-}
-
 #global State?:state;
 
 State#get state {
@@ -51,7 +45,7 @@ IRStructDef#<Struct_:struct_>.ir {
     for (Field:field in struct_.fields) {
         [members].append[[field.type_].ir];
     };
-    return IRStructDef [struct_.id, false, IRStructType [members]];
+    return IRStructDef [struct_.symbol, false, IRStructType [members]];
 }
 
 IRModule#build module {
@@ -265,8 +259,8 @@ IRValue#<Val:val>.get {
         return [val.basic].unwrap.val;
     } elif (val.assignable) {
         return emit [load [[val.assignable].unwrap.addr] to [[val.type_].ir]];
-    } elif (val.global_ptr) {
-        return [val.global_ptr].unwrap.addr;
+    } elif (val.const) {
+        return [val.const].unwrap.val;
     } else {
         abort "Invalid Val";
     };
@@ -333,8 +327,8 @@ Val#assignable val <Type_:type_> <IRValue:addr> {
     return Val [type_, null, AssignableVal [addr], null];
 }
 
-Val#global ptr val <Type_:type_> <IRValue:addr> {
-    return Val [type_, null, null, GlobalPtrVal [addr]];
+Val#const val <Type_:type_> <IRValue:val> {
+    return Val [type_, null, null, ConstVal [val]];
 }
 
 IRValue#bitwise not <Type_:type_> <IRValue:val> {
@@ -451,27 +445,14 @@ Val#do_Val_cmp<Val:a><Str:cmpop><Val:b> {
     if ([a.type_].is_float) {
         return basic val [Bool_] [emit [compare float [[a].get] [["o"]+[cmpop]] [[b].get]]];
     } else {
-        return basic val [Bool_] [emit [compare int [[a].get] [cmpop] [[b].get]]];
-    };
-}
-
-#call <ExternFunc:func> <[Val]:args> {
-    [IRValue]:arg_vals = [IRValue] [];
-    for (W:i enumerating args) {
-        if (![args[i].type_] == [func.args[i]]) {
-            abort "Incorrect type_ passed as argument to function";
+        if ([cmpop] equals ["eq"]) {
+        } elif ([cmpop] equals ["ne"]) {
+        } elif ([a.type_].is_unsigned_int) {
+            cmpop = ["u"] + [cmpop];
+        } else {
+            cmpop = ["s"] + [cmpop];
         };
-        [arg_vals].append[[args[i]].get];
-    };
-
-    W:varg_count = [args].len - [func.args].len;
-    
-    if (func.ret_type_) {
-        Type_:ret_type_ = [func.ret_type_].unwrap;
-        IRValue:result = emit [call [[ret_type_].ir] [func.ir_func.name] [arg_vals] [varg_count]];
-        get active func.last_ret_val = basic val [ret_type_] [result];
-    } else {
-        emit [call void [func.ir_func.name] [arg_vals] [varg_count]];
+        return basic val [Bool_] [emit [compare int [[a].get] [cmpop] [[b].get]]];
     };
 }
 
@@ -490,14 +471,13 @@ Val#access field <W:nth> of <Val:val> as <Type_:type_> {
 }
 
 IRConstant#get_const_from_val<Val:val> {
-    if (!val.basic) {
-        abort "Expected constant";
+    if (val.const) {
+        IRValue:ir_val = [val.const].unwrap.val;
+        if (ir_val.constant) {
+            return [ir_val.constant].unwrap;
+        };
     };
-    IRValue:ir_val = [val.basic].unwrap.val;
-    if (!ir_val.constant) {
-        abort "Expected constant";
-    };
-    return [ir_val.constant].unwrap;
+    abort "Expected constant";
 }
 
 IRValue#make_global <IRType:ir_type> <Str?:provided_name> <IRConstant?:basic_init> <Str?:str_init> <Bool:is_const> {
@@ -535,7 +515,8 @@ L#index of field <Str:name> in <Struct_:struct_> {
     assert [val] is nonnullable;
     assert [val] is ref;
     Type_:type_ = val.type_;
-if (fn [null] ["check_ref_{}" % [val.type_].stringify] [[Type_] [type_, L_]] [[Val] [val, rc]]) {
+    Str:func_name = "check_ref_{}_{}" % [val.type_].stringify % get filename;
+if (fn [null] [func_name] [[Type_] [type_, L_]] [[Val] [val, rc]]) {
     Val:val_here = func arg [0];
     Val:rc_here = func arg [1];
     if_ [[rc_here] eq [c L_ [0]]];
@@ -570,7 +551,7 @@ end fn;
 
     PHINode:i_phi = new PHI [L_];
 
-    Val:initial_i = c L_ [0];
+    Val:initial_i = load [c L_ [0]];
     [i_phi].add_incoming[initial_i];
 
     goto_ [check];
