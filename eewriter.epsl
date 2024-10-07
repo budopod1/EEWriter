@@ -104,6 +104,10 @@ Bool#<Type_?:a> == <Type_?:b> {
     };
 }
 
+Type_#Null_ {
+    return Type_ ["Null", -1, [Type_] []];
+}
+
 Type_#Bool_ {
     return Type_ ["Bool", 1, [Type_] []];
 }
@@ -148,6 +152,10 @@ Type_#Array_ <Type_:sub> {
     return Type_ ["Array", -1, [Type_] [sub]];
 }
 
+Type_#Str_ {
+    return Array_ [Byte_];
+}
+
 // a small extension to the Epsilon type_ system
 Type_#Pointer <Type_:sub> {
     return Type_ ["Pointer", -1, [Type_] [sub]];
@@ -175,6 +183,14 @@ Struct_?#<Type_:type_>.get_struct {
 }
 
 Str#<Type_:type_>.stringify {
+    if ([type_.generics].len == 0) {
+        if (type_.bits == -1) {
+            return [type_.name].clone;
+        } else {
+            return "{}{}" % type_.name % type_.bits;
+        };
+    };
+
     Str:generic_txt = "";
     for (Type_:generic in type_.generics) {
         if ([generic_txt].len) {
@@ -184,9 +200,9 @@ Str#<Type_:type_>.stringify {
     };
     
     if (type_.bits == -1) {
-        return "{} <{}>" % type_.name % generic_txt;
+        return "{}<{}>" % type_.name % generic_txt;
     } else {
-        return "{} {} <{}>" % type_.name % type_.bits % generic_txt;
+        return "{}{}<{}>" % type_.name % type_.bits % generic_txt;
     };
 }
 
@@ -220,9 +236,9 @@ Val#c null_ {
 
 Val#c <Z:val> <Type_:type_> {
     if ([type_].is_float) {
-        return const val [type_][make const [val] [(W)type_.bits]];
-    } else {
         return c [(Q)val] [type_];
+    } else {
+        return const val [type_][make const [val] [(W)type_.bits]];
     };
 }
 
@@ -245,6 +261,10 @@ Bool#<Type_:type_>.is_int {
 
 Bool#<Type_:type_>.is_float {
     return [type_.name] equals ["Q"];
+}
+
+Bool#<Type_:type_>.is_numeric {
+    return [type_].is_int || [type_].is_float;
 }
 
 Bool#<Type_:type_>.is_nullable {
@@ -553,8 +573,10 @@ ExternFunc#get fn <Str:name> {
 #call <ExternFunc:func> <[Val]:args> {
     [IRValue]:arg_vals = [IRValue] [];
     for (W:i enumerating args) {
-        if (![args[i].type_] == [func.args[i]]) {
-            abort "Incorrect type_ passed as argument to function";
+        if (i < [func.args].len) {
+            if (![args[i].type_] == [func.args[i]]) {
+                abort "Incorrect type_ passed as argument to function";
+            };
         };
         [arg_vals].append[[args[i]].get];
     };
@@ -686,6 +708,18 @@ Label#new label: {
     emit [branch to [if_true.block] if_ [cond_bool] else_ [if_false.block]];
 }
 
+#switch_ on <Val:val> to <[Val]:targets> <[Label]:labels> otherwise <Label:otherwise> {
+    [IRConstant]:const_targets = [IRConstant] [];
+    for (Val:target in targets) {
+        [const_targets].append[get_const_from_val[target]];
+    };
+    [IRBasicBlock]:blocks = [IRBasicBlock] [];
+    for (Label:label in labels) {
+        [blocks].append[label.block];
+    };
+    emit [switch_ on [[val].get] to [const_targets] [blocks] otherwise [otherwise.block]];
+}
+
 #if_ <Val:cond> {
     IRBasicBlock:entry = new bb;
     IRBasicBlock:otherwise = new bb;
@@ -703,7 +737,7 @@ Label#new label: {
     set current bb [otherwise];
 }
 
-#while <Val:cond> from <Label:label> {
+#while_ <Val:cond> from <Label:label> {
     IRBasicBlock:entry = label.block;
     IRBasicBlock:body = new bb;
     IRBasicBlock:otherwise = new bb;
@@ -913,7 +947,17 @@ Val#make global <Type_:type_> <Str?:name> <Val?:init> {
     if (init) {
         const_init = get_const_from_val[[init].unwrap];
     };
-    return assignable val [type_] [make_global[[type_].ir][name][const_init][null][false]];
+    IRValue:ir_ptr = make_global[[type_].ir][name][const_init][null][false];
+    return assignable val [type_] [ir_ptr];
+}
+
+Val#make ptr to global <Type_:type_> <Str?:name> <Val?:init> {
+    IRConstant?:const_init = null;
+    if (init) {
+        const_init = get_const_from_val[[init].unwrap];
+    };
+    IRValue:ir_ptr = make_global[[type_].ir][name][const_init][null][false];
+    return const val [Pointer [type_]] [ir_ptr];
 }
 
 Val#make const <Type_:type_> <Str?:name> <Val:init> {
@@ -929,10 +973,14 @@ Val#const str <Str:str> {
     ];
 }
 
-Val#mut str <Str:str> <W:extra_cap> {
-    Val:result = malloc [c [[str].len + extra_cap]];
+Val#mut str <Str:str> with <W:extra_cap> extra capacity {
+    Val:result = malloc [c [[str].len + extra_cap]] [Byte_];
     memcpy [c [[str].len]] [const str [str]] to [result];
     return result;
+}
+
+Val#mut str <Str:str> {
+    return mut str [str] with [0] extra capacity;
 }
 
 Val#new array <Type_:type_> <[Val]:vals> with capacity <L:capacity> {
