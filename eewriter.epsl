@@ -291,6 +291,12 @@ Bool#<Type_:type_>.is_ref {
     };
 }
 
+#assert <Val:val> is pointer {
+    if ([val.type_.name] not equals ["Pointer"]) {
+        abort "Expected type_ Pointer, found {}" % [val.type_].stringify;
+    };
+}
+
 Struct_#assert <Type_:val> is struct_ {
     Struct_?:maybe_struct = [val].get_struct;
     if ([maybe_struct].is_null) {
@@ -829,29 +835,20 @@ Val#malloc pointee <Val:count> <Type_:type_> {
     return cast [malloc [[sizeof pointee [type_]] * [cast [count] to [L_]]]] to [type_];
 }
 
+Val#realloc <Val:val> to <Val:bytes> bytes {
+    extern fn [Internal_] ["realloc"] [[Type_] [Internal_, L_]]
+        [[Val] [val, cast [bytes] to [L_]]];
+    return func ret;
+}
+
+Val#realloc <Val:val> to <Val:count> elements {
+    assert [val] is pointer;
+    Val:bytes = [sizeof [val.type_.generics[0]]] * [cast [count] to [L_]];
+    return cast [realloc [cast [val] to [Internal_]] to [bytes] bytes] to [val.type_];
+}
+
 #free <Val:val> {
     extern fn [null] ["free"] [[Type_] [Internal_]] [[Val] [cast [val] to [Internal_]]];
-}
-
-Val#memcmp <Val:v1> <Val:v2> <Val:count> {
-    if (![v1.type_] == [v2.type_]) {
-        abort "Can only memcmp equal types_";
-    };
-    extern fn [Z_] ["memcmp"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
-        cast [v1] to [Internal_], cast [v2] to [Internal_], 
-        [sizeof pointee [v1.type_]] * [cast [count] to [L_]]
-    ]];
-    return func ret;
-}
-
-Val#memcmp <Val:v1> <Val:v2> {
-    if (![v1.type_] == [v2.type_]) {
-        abort "Can only memcmp equal types_";
-    };
-    extern fn [Z_] ["memcmp"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
-        cast [v1] to [Internal_], cast [v2] to [Internal_], sizeof pointee [v1.type_]
-    ]];
-    return func ret;
 }
 
 #memcpy <Val:count> <Val:v1> to <Val:v2> {
