@@ -578,6 +578,9 @@ ExternFunc#get fn <Str:name> {
 
 #call <ExternFunc:func> <[Val]:args> {
     [IRValue]:arg_vals = [IRValue] [];
+    if ([args].len < [func.args].len) {
+        abort "Not enough arguments for function";
+    };
     for (W:i enumerating args) {
         if (i < [func.args].len) {
             if (![args[i].type_] == [func.args[i]]) {
@@ -599,6 +602,9 @@ ExternFunc#get fn <Str:name> {
 }
 
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args> {
+    if ([arg_types_].len != [provided_args].len) {
+        abort "The number of arguments and the number of argument types_ must match";
+    };
     ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false];
     call [func] [provided_args];
 }
@@ -619,6 +625,9 @@ Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
 }
 
 Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args> {
+    if ([arg_types_].len != [provided_args].len) {
+        abort "The number of arguments and the number of argument types_ must match";
+    };
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
     if (defined_fn) {
         call [[defined_fn].unwrap.base] [provided_args];
