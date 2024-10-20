@@ -285,16 +285,24 @@ Bool#<Type_:type_>.is_ref {
     return [struct_].unwrap.is_ref;
 }
 
+#assert <Type_:type_> is array {
+    if ([type_.name] not equals ["Array"]) {
+        abort "Expected type_ Array, found {}" % [type_].stringify;
+    };
+}
+
 #assert <Val:val> is array {
-    if ([val.type_.name] not equals ["Array"]) {
-        abort "Expected type_ Array, found {}" % [val.type_].stringify;
+    assert [val.type_] is array;
+}
+
+#assert <Type_:type_> is pointer {
+    if ([type_.name] not equals ["Pointer"]) {
+        abort "Expected type_ Pointer, found {}" % [type_].stringify;
     };
 }
 
 #assert <Val:val> is pointer {
-    if ([val.type_.name] not equals ["Pointer"]) {
-        abort "Expected type_ Pointer, found {}" % [val.type_].stringify;
-    };
+    assert [val.type_] is pointer;
 }
 
 Struct_#assert <Type_:val> is struct_ {
@@ -823,6 +831,11 @@ Val#sizeof pointee <Type_:type_> {
     return basic val [L_] [emit [ptr [ptr] to int [int type [64]]]];
 }
 
+Val#sizeof elem <Type_:type_> {
+    assert [type_] is array;
+    return sizeof [type_.generics[0]];
+}
+
 Val#malloc <Val:bytes> {
     extern fn [Internal_] ["malloc"] [[Type_] [L_]] [[Val] [cast [bytes] to [L_]]];
     return func ret;
@@ -852,7 +865,7 @@ Val#realloc <Val:val> to <Val:bytes> bytes {
 
 Val#realloc <Val:val> to <Val:count> elements {
     assert [val] is pointer;
-    Val:bytes = [sizeof [val.type_.generics[0]]] * [cast [count] to [L_]];
+    Val:bytes = [sizeof pointee [val.type_]] * [cast [count] to [L_]];
     return cast [realloc [cast [val] to [Internal_]] to [bytes] bytes] to [val.type_];
 }
 
