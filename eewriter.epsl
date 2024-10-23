@@ -210,6 +210,10 @@ Val#c <Bool:val> {
     return const val [Bool_][make const [val]];
 }
 
+Val#c <Byte:val> {
+    return const val [Byte_][make const [val]];
+}
+
 Val#c <W:val> {
     return const val [W_][make const [val]];
 }
