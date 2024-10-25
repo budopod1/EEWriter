@@ -652,6 +652,19 @@ Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args>
     };
 }
 
+Bool#specialized fn <Type_?:ret_type_> <Str:name> <[Val]:args> {
+    [Type_]:arg_types_ = [Type_] [];
+    for (Val:arg in args) {
+        [arg_types_].append[arg.type_];
+    };
+    Str:full_name = "{}_{}" % name  % get filename;
+    for (Type_:arg_type_ in arg_types_) {
+        [full_name].append['_'];
+        [full_name].extend[[arg_type_].stringify];
+    };
+    return fn [ret_type_] [full_name] [arg_types_] [args];
+}
+
 #ret void {
     emit [ret void instruction];
 }

@@ -515,8 +515,7 @@ L#index of field <Str:name> in <Struct_:struct_> {
     assert [val] is nonnullable;
     assert [val] is ref;
     Type_:type_ = val.type_;
-    Str:func_name = "check_ref_{}_{}" % [val.type_].stringify % get filename;
-if (fn [null] [func_name] [[Type_] [type_, L_]] [[Val] [val, rc]]) {
+if (specialized fn [null] ["check_ref"] [[Val] [val, rc]]) {
     Val:val_here = func arg [0];
     Val:rc_here = func arg [1];
     if_ [[rc_here] eq [c L_ [0]]];
