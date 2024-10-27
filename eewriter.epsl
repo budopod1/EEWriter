@@ -946,14 +946,14 @@ Val#<Val:val>.idx<Val:idx> {
 
 Val#<Val:val>.<L:field> {
     Struct_:struct_ = assert [val] is ref struct_;
-    // +1 because of the refCounter field
+    // +1 because of the ref_counter field
     return *[access field [field+1] of [val] as [struct_.fields[field].type_]];
 }
 
 Val#<Val:val>.<Str:field> {
     Struct_:struct_ = assert [val] is ref struct_;
     L:field_idx = index of field [field] in [struct_];
-    // +1 because of the refCounter field
+    // +1 because of the ref_counter field
     return *[access field [field_idx+1] of [val] as [struct_.fields[field_idx].type_]];
 }
 
@@ -1037,7 +1037,7 @@ Val#new array <Type_:type_> <[Val]:vals> with capacity <L:capacity> {
 
     [[result].length] = [c L_ [[vals].len]];
 
-    Val:content = malloc [c [capacity]] [type_.generics[0]];
+    Val:content = malloc [c L_ [capacity]] [type_.generics[0]];
     for (L:i enumerating vals) {
         [[content].idx[c [i]]] = [vals[i]];
     };
@@ -1076,6 +1076,11 @@ Val#new ref struct_ <Type_:type_> <[Val]:fields> {
     return result;
 }
 
+#printf <Str:template> <[Val]:vals> {
+    extern fn [null] ["printf"] [[Type_] [Pointer [Byte_]]] vargs
+        [[[Val] [const str [template]]] + [vals]];
+}
+
 Val#<Val:val> == null_ {
     assert [val] is nullable;
     return basic val [Bool_] [emit [compare int [[val].get] ["eq"] [make const null_]]];
@@ -1086,10 +1091,14 @@ Val#<Val:val> != null_ {
     return basic val [Bool_] [emit [compare int [[val].get] ["ne"] [make const null_]]];
 }
 
-#<Val:val>.init_ref {
+Val#<Val:val>.ref {
     assert [val] is nonnullable;
     assert [val] is ref;
-    [*[access field [0] of [val] as [L_]]] = [c L_ [0]];
+    return *[access field [0] of [val] as [L_]];
+}
+
+#<Val:val>.init_ref {
+    [[val].ref] = [c L_ [0]];
 }
 
 #<Val:val>.incr_ref {
