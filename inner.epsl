@@ -142,11 +142,11 @@ ExternFunc#require extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> 
 Func_?#defined fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
     for (Func_:func in get state.funcs) {
         if ([func.base.ir_func.name] equals [name]) {
-             if (extern func matches [func.base] [ret_type_] [name] [arg_types_] [false]) {
+            if (extern func matches [func.base] [ret_type_] [name] [arg_types_] [false]) {
                 return func;
-             } else {
+            } else {
                 abort "A function already exists with the name {}, but does not share the same return type_ or parameters" % name;
-             };
+            };
         };
     };
     
@@ -405,11 +405,11 @@ IRValue#cast <IRValue:val> from <Type_:from> to <Type_:to> {
     } elif (([from.name] equals ["Optional"]) && ([from.generics[0]?] == [(Type_?)to])) {
         return val;
     } elif (([to.name] equals ["Optional"]) && ([to.generics[0]?] == [(Type_?)from])) {
-/*TODO: replace the above 3 lines with:
+/* TODO: replace the above 3 lines with:
     } elif (([from.name] equals ["Optional"]) && ([from.generics[0]] == [to])) {
         return val;
     } elif (([to.name] equals ["Optional"]) && ([to.generics[0]] == [from])) {
-  once && short circuts*/
+once && short circuts */
         return val;
     } elif ([to.name] equals ["Bool"]) {
         return compute truth value [from] [val];
