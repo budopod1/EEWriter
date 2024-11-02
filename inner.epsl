@@ -209,21 +209,21 @@ IRType#<Type_:type_>.ir {
     } else {
         Struct_?:maybe_struct = [type_].get_struct;
 
-        if (maybe_struct) {
-            Struct_:struct_ = [maybe_struct].unwrap;
-            if (struct_.is_ref) {
-                return ptr type;
-            } else {
-                [IRType]:members = [IRType] [];
-                [members].require_capacity[[struct_.fields].len];
-                for (Field:field in struct_.fields) {
-                    [members].append[[field.type_].ir];
-                };
-                return struct_ type [members];
-            };
+        if (!maybe_struct) {
+            abort "Unknown type_ {}" % [type_].stringify;
         };
 
-        abort "Unknown type_ {}" % [type_].stringify;
+        Struct_:struct_ = [maybe_struct].unwrap;
+        if (struct_.is_ref) {
+            return ptr type;
+        } else {
+            [IRType]:members = [IRType] [];
+            [members].require_capacity[[struct_.fields].len];
+            for (Field:field in struct_.fields) {
+                [members].append[[field.type_].ir];
+            };
+            return struct_ type [members];
+        };
     };
 }
 
