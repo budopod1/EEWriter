@@ -501,6 +501,11 @@ Val#<Val:a> ne <Val:b> {
     return do_Val_cmp[a]["ne"][b];
 }
 
+Val#is_NaN<Val:a> {
+    IRValue:a_ir = [a].get;
+    return basic val [Bool_] [emit [compare float [a_ir] ["uno"] [a_ir]]];
+}
+
 Val#<Val:a> shift left <Val:b> {
     if (![a.type_].is_int || ![b.type_].is_int) {
         abort "Bitshift operations require both types to be an int";
