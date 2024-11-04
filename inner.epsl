@@ -203,8 +203,8 @@ IRType#<Type_:type_>.ir {
     } elif ([type_.name] equals ["Q"]) {
         return float type [(W)type_.bits];
     } elif (([type_.name] equals ["Null"]) || ([type_.name] equals ["Optional"]) 
-        || ([type_.name] equals ["File"]) || ([type_.name] equals ["Array"])
-        || ([type_.name] equals ["Internal"]) || ([type_.name] equals ["Pointer"])) {
+        || ([type_.name] equals ["Array"]) || ([type_.name] equals ["Internal"])
+        || ([type_.name] equals ["Pointer"])) {
         return ptr type;
     } else {
         Struct_?:maybe_struct = [type_].get_struct;
