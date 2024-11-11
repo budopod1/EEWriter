@@ -585,12 +585,16 @@ ExternFunc#get fn <Str:name> {
     return [fn].unwrap;
 }
 
+#private accessibility {
+    get state.next_fn_private = true;
+}
+
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
-    require extern fn [ret_type_] [name] [arg_types_] [false];
+    require extern fn [ret_type_] [name] [arg_types_] [false] private: [is next fn private];
 }
 
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> vargs {
-    require extern fn [ret_type_] [name] [arg_types_] [true];
+    require extern fn [ret_type_] [name] [arg_types_] [true] private: [is next fn private];
 }
 
 #call <ExternFunc:func> <[Val]:args> {
@@ -622,20 +626,24 @@ ExternFunc#get fn <Str:name> {
     if ([arg_types_].len != [provided_args].len) {
         abort "The number of arguments and the number of argument types_ must match";
     };
-    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false];
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false] private: [is next fn private];
     call [func] [provided_args];
 }
 
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> vargs <[Val]:provided_args> {
-    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true];
+    if ([arg_types_].len > [provided_args].len) {
+        abort "The number of arguments cannot be less than the number of argument types_";
+    };
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true] private: [is next fn private];
     call [func] [provided_args];
 }
 
 Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
+    Bool:is_private = is next fn private;
     if (defined fn [ret_type_] [name] [arg_types_]) {
         return false;
     } else {
-        Func_:new_fn = new fn [ret_type_] [name] [arg_types_];
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] private: [is_private];
         add fn [new_fn];
         return true;
     };
@@ -645,12 +653,13 @@ Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args>
     if ([arg_types_].len != [provided_args].len) {
         abort "The number of arguments and the number of argument types_ must match";
     };
+    Bool:is_private = is next fn private;
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
     if (defined_fn) {
         call [[defined_fn].unwrap.base] [provided_args];
         return false;
     } else {
-        Func_:new_fn = new fn [ret_type_] [name] [arg_types_];
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] private: [is_private];
         call [new_fn.base] [provided_args];
         add fn [new_fn];
         return true;
@@ -662,11 +671,12 @@ Bool#specialized fn <Type_?:ret_type_> <Str:name> <[Val]:args> {
     for (Val:arg in args) {
         [arg_types_].append[arg.type_];
     };
-    Str:full_name = "{}_{}" % name  % get filename;
+    Str:full_name = [name].clone;
     for (Type_:arg_type_ in arg_types_) {
         [full_name].append['_'];
         [full_name].extend[[arg_type_].stringify];
     };
+    private accessibility;
     return fn [ret_type_] [full_name] [arg_types_] [args];
 }
 
