@@ -161,8 +161,8 @@ IRValuedInstruction#select <IRType:type> <IRValue:if_true> if_ <IRValue:cond> el
     return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRSelectInstruction [cond, if_true, if_false], null];
 }
 
-IRValuedInstruction#call <IRType:ret_type_> <Str:name> <[IRValue]:args> <W:varg_count> {
-    return IRValuedInstruction [new register [ret_type_], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRCallInstruction [name, args, varg_count]];
+IRValuedInstruction#call <IRType:ret_type_> <IRRegister:register> <[IRValue]:args> <W:varg_count> {
+    return IRValuedInstruction [new register [ret_type_], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRCallInstruction [register, args, varg_count]];
 }
 
 IRInstruction#make instruction <IRValuedInstruction:valued> {
@@ -201,8 +201,8 @@ IRInstruction#store <IRValue:val> in <IRValue:ptr> {
     return IRInstruction [null, null, null, null, null, null, null, IRStoreInstruction [val, ptr], null];
 }
 
-IRInstruction#call void <Str:name> <[IRValue]:args> <W:varg_count> {
-    return IRInstruction [null, null, null, null, null, null, null, null, IRCallInstruction [name, args, varg_count]];
+IRInstruction#call void <IRRegister:register> <[IRValue]:args> <W:varg_count> {
+    return IRInstruction [null, null, null, null, null, null, null, null, IRCallInstruction [register, args, varg_count]];
 }
 
 IRType#ptr type {

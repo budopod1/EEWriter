@@ -156,9 +156,18 @@ Type_#Str_ {
     return Array_ [Byte_];
 }
 
-// a small extension to the Epsilon type_ system
+// the next three types_ are a small extension to the Epsilon type_ system
+
 Type_#Pointer <Type_:sub> {
     return Type_ ["Pointer", -1, [Type_] [sub]];
+}
+
+Type_#FuncPtr <Type_:ret_type_> <[Type_]:arg_types_> {
+    return Type_ ["FuncPtr", -1, [[Type_] [ret_type_]] + [arg_types_]];
+}
+
+Type_#VoidFuncPtr <[Type_]:arg_types_> {
+    return Type_ ["VoidFuncPtr", -1, arg_types_];
 }
 
 Type_#T_ <Str:name> {
@@ -271,6 +280,10 @@ Bool#<Type_:type_>.is_numeric {
     return [type_].is_int || [type_].is_float;
 }
 
+Bool#<Type_:type_>.is_callable {
+    return ([type_.name] equals ["FuncPtr"]) || ([type_.name] equals ["VoidFuncPtr"]);
+}
+
 Bool#<Type_:type_>.is_nullable {
     return ([type_.name] equals ["Optional"]) || ([type_.name] equals ["Null"]);
 }
@@ -307,6 +320,16 @@ Bool#<Type_:type_>.is_ref {
 
 #assert <Val:val> is pointer {
     assert [val.type_] is pointer;
+}
+
+#assert <Type_:type_> is callable {
+    if (![type_].is_callable) {
+        abort "Expected callable type_, found {}" % [type_].stringify;
+    };
+}
+
+#assert <Val:val> is callable {
+    assert [val.type_] is callable;
 }
 
 Struct_#assert <Type_:val> is struct_ {
@@ -598,28 +621,22 @@ ExternFunc#get fn <Str:name> {
 }
 
 #call <ExternFunc:func> <[Val]:args> {
-    [IRValue]:arg_vals = [IRValue] [];
-    if ([args].len < [func.args].len) {
-        abort "Not enough arguments for function";
-    };
-    for (W:i enumerating args) {
-        if (i < [func.args].len) {
-            if (![args[i].type_] == [func.args[i]]) {
-                abort "Incorrect type_ passed as argument to function";
-            };
-        };
-        [arg_vals].append[[args[i]].get];
-    };
+    call [func.ret_type_] [register of func [func.ir_func]] [func.args] [args];
+}
 
-    W:varg_count = [args].len - [func.args].len;
-    
-    if (func.ret_type_) {
-        Type_:ret_type_ = [func.ret_type_].unwrap;
-        IRValue:result = emit [call [[ret_type_].ir] [func.ir_func.name] [arg_vals] [varg_count]];
-        get active func.last_ret_val = basic val [ret_type_] [result];
-    } else {
-        emit [call void [func.ir_func.name] [arg_vals] [varg_count]];
+#call <Val:func> <[Val]:args> {
+    assert [func] is callable;
+    [Type_]:arg_types_ = func.type_.generics;
+    Type_?:ret_type_ = null;
+    if ([func.type_.name] equals ["FuncPtr"]) {
+        arg_types_ = [arg_types_].clone;
+        ret_type_ = [arg_types_].pop[0];
     };
+    IRRegister?:maybe_register = [func].get.register;
+    if ([maybe_register].is_null) {
+        abort "Can't call a constant as a a function pointer";
+    };
+    call [ret_type_] [[maybe_register].unwrap] [arg_types_] [args];
 }
 
 #extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args> {
@@ -640,10 +657,13 @@ ExternFunc#get fn <Str:name> {
 
 Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
     Bool:is_private = is next fn private;
-    if (defined fn [ret_type_] [name] [arg_types_]) {
+    Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
+    if (defined_fn) {
+        get state.last_defined_func = [defined_fn].unwrap.base;
         return false;
     } else {
         Func_:new_fn = new fn [ret_type_] [name] [arg_types_] private: [is_private];
+        get state.last_defined_func = new_fn.base;
         add fn [new_fn];
         return true;
     };
@@ -657,10 +677,12 @@ Bool#fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <[Val]:provided_args>
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
     if (defined_fn) {
         call [[defined_fn].unwrap.base] [provided_args];
+        get state.last_defined_func = [defined_fn].unwrap.base;
         return false;
     } else {
         Func_:new_fn = new fn [ret_type_] [name] [arg_types_] private: [is_private];
         call [new_fn.base] [provided_args];
+        get state.last_defined_func = new_fn.base;
         add fn [new_fn];
         return true;
     };
@@ -678,6 +700,16 @@ Bool#specialized fn <Type_?:ret_type_> <Str:name> <[Val]:args> {
     };
     private accessibility;
     return fn [ret_type_] [full_name] [arg_types_] [args];
+}
+
+Bool#specialized fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
+    Str:full_name = [name].clone;
+    for (Type_:arg_type_ in arg_types_) {
+        [full_name].append['_'];
+        [full_name].extend[[arg_type_].stringify];
+    };
+    private accessibility;
+    return fn [ret_type_] [full_name] [arg_types_];
 }
 
 #ret void {
@@ -704,6 +736,29 @@ Val#func ret {
         abort "The current function has not called another function";
     };
     return [ret].unwrap;
+}
+
+Type_#<ExternFunc:func>.ptr_type_ {
+    if (func.ir_func.has_vargs) {
+        abort "Pointers to functions with vargs currently can't be represented in the EEWriter types system";
+    };
+    if (func.ret_type_) {
+        return FuncPtr [[func.ret_type_].unwrap] [func.args];
+    } else {
+        return VoidFuncPtr [func.args];
+    };
+}
+
+Val#func ptr {
+    ExternFunc?:func = get state.last_defined_func;
+    if ([func].is_null) {
+        abort "A function must be defined or required before a function pointer can be created";
+    };
+    return [[func].unwrap].func_ptr;
+}
+
+Val#<ExternFunc:func>.func_ptr {
+    return const val [[func].ptr_type_] [[func.ir_func].make_ptr];
 }
 
 Val#func arg <L:i> {

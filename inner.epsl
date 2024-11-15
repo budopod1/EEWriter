@@ -8,6 +8,7 @@ State {
     [ExternFunc]:extern_funcs,
     [Func_]:func_stack,
     Bool:next_fn_private,
+    ExternFunc?:last_defined_func,
     [Struct_]:structs,
     [IRGlobal]:globals
 }
@@ -17,7 +18,7 @@ Func_ {
     ExternFunc:base,
     [Block]:block_stack,
     IRBasicBlock:current_bb,
-    Val?:last_ret_val
+    Val?:last_ret_val,
 }
 
 #global State?:state;
@@ -32,7 +33,7 @@ State#get state {
 
 #init state <Str:filename> {
     state = State [
-        filename, [Func_] [], [ExternFunc] [], [Func_] [], false,
+        filename, [Func_] [], [ExternFunc] [], [Func_] [], false, null,
         [Struct_] [], [IRGlobal] []
     ];
 }
@@ -140,6 +141,7 @@ ExternFunc#require extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> 
     if (maybe_fn) {
         ExternFunc:fn = [maybe_fn].unwrap;
         if (extern func matches [fn] [ret_type_] [name] [arg_types_] [has_vargs]) {
+            get state.last_defined_func = fn;
             return fn;
         } else {
             abort "An extern function already exists by the name {}, but does not share the same return type_ or parameters" % name;
@@ -147,6 +149,7 @@ ExternFunc#require extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> 
     };
     ExternFunc:extern_func = create new extern fn [ret_type_] [name] [arg_types_] [has_vargs] private: [is_private];
     [get state.extern_funcs].append[extern_func];
+    get state.last_defined_func = extern_func;
     return extern_func;
 }
 
@@ -215,7 +218,8 @@ IRType#<Type_:type_>.ir {
         return float type [(W)type_.bits];
     } elif (([type_.name] equals ["Null"]) || ([type_.name] equals ["Optional"]) 
         || ([type_.name] equals ["Array"]) || ([type_.name] equals ["Internal"])
-        || ([type_.name] equals ["Pointer"])) {
+        || ([type_.name] equals ["Pointer"]) || ([type_.name] equals ["FuncPtr"])
+        || ([type_.name] equals ["VoidFuncPtr"])) {
         return ptr type;
     } else {
         Struct_?:maybe_struct = [type_].get_struct;
@@ -330,6 +334,14 @@ IRValue#emit <IRValuedInstruction:valued> {
     };
 }
 
+IRRegister#register of func <IRFunc:func> {
+    return IRRegister [true, func.name, ptr type];
+}
+
+IRValue#<IRFunc:func>.make_ptr {
+    return make_val [register of func [func]];
+}
+
 Val#basic val <Type_:type_> <IRValue:val> {
     return Val [type_, BasicVal [val, current bb], null, null];
 }
@@ -340,6 +352,31 @@ Val#assignable val <Type_:type_> <IRValue:addr> {
 
 Val#const val <Type_:type_> <IRValue:val> {
     return Val [type_, null, null, ConstVal [val]];
+}
+
+#call <Type_?:ret_type_> <IRRegister:register> <[Type_]:arg_types_> <[Val]:args> {
+    [IRValue]:arg_vals = [IRValue] [];
+    if ([args].len < [arg_types_].len) {
+        abort "Not enough arguments for function";
+    };
+    for (W:i enumerating args) {
+        if (i < [arg_types_].len) {
+            if (![args[i].type_] == [arg_types_[i]]) {
+                abort "Incorrect type_ passed as argument to function";
+            };
+        };
+        [arg_vals].append[[args[i]].get];
+    };
+
+    W:varg_count = [args].len - [arg_types_].len;
+    
+    if (ret_type_) {
+        Type_:known_ret_type_ = [ret_type_].unwrap;
+        IRValue:result = emit [call [[known_ret_type_].ir] [register] [arg_vals] [varg_count]];
+        get active func.last_ret_val = basic val [known_ret_type_] [result];
+    } else {
+        emit [call void [register] [arg_vals] [varg_count]];
+    };
 }
 
 IRValue#bitwise not <Type_:type_> <IRValue:val> {
@@ -441,6 +478,8 @@ once && short circuts */
     } elif ([from.name] equals ["Internal"]) {
         return val;
     } elif ([to.name] equals ["Internal"]) {
+        return val;
+    } elif ([from].is_callable && [to].is_callable) {
         return val;
     } elif ([from.name] equals ["Pointer"]) {
         return val;
