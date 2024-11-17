@@ -227,7 +227,11 @@ Val#c <W:val> {
     return const val [W_][make const [val]];
 }
 
-Val#c L_ <W:val> {
+Val#c <L:val> {
+    abort "Calling 'c' with a value of type L is ambiguous, either use 'c L_' or cast the argument to a W";
+}
+
+Val#c L_ <L:val> {
     return const val [L_][make const [val] [64]];
 }
 
@@ -1080,8 +1084,8 @@ Val#const str <Str:str> {
 }
 
 Val#mut str <Str:str> with <W:extra_cap> extra capacity {
-    Val:result = malloc [c [[str].len + extra_cap]] [Byte_];
-    memcpy [c [[str].len]] [const str [str]] to [result];
+    Val:result = malloc [c L_ [[str].len + extra_cap]] [Byte_];
+    memcpy [c L_ [[str].len]] [const str [str]] to [result];
     return result;
 }
 
@@ -1109,7 +1113,7 @@ Val#new array <Type_:type_> <[Val]:vals> with capacity <L:capacity> {
 
     Val:content = malloc [c L_ [capacity]] [type_.generics[0]];
     for (L:i enumerating vals) {
-        [[content].idx[c [i]]] = [vals[i]];
+        [[content].idx[c L_ [i]]] = [vals[i]];
     };
     [[result].content] = [content];
     
