@@ -41,15 +41,15 @@ IRValuedInstruction#<IRValue:a> fdiv <IRValue:b> to <IRType:type> {
     return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, IRFloatDivisionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
 }
 
-IRValuedInstruction#<IRValue:a> umod <IRValue:b> to <IRType:type> {
+IRValuedInstruction#<IRValue:a> urem <IRValue:b> to <IRType:type> {
     return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, IRUnsignedModuloInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
 }
 
-IRValuedInstruction#<IRValue:a> smod <IRValue:b> to <IRType:type> {
+IRValuedInstruction#<IRValue:a> srem <IRValue:b> to <IRType:type> {
     return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, IRSignedModuloInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
 }
 
-IRValuedInstruction#<IRValue:a> fmod <IRValue:b> to <IRType:type> {
+IRValuedInstruction#<IRValue:a> frem <IRValue:b> to <IRType:type> {
     return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, IRFloatModuloInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
 }
 

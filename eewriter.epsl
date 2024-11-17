@@ -488,11 +488,11 @@ Val#<Val:a> / <Val:b> {
 Val#<Val:a> % <Val:b> {
     assert type_ equality [a], [b];
     if ([a.type_].is_unsigned_int) {
-        return basic val [a.type_] [emit [[[a].get] umod [[b].get] to [[a.type_].ir]]];
+        return basic val [a.type_] [emit [[[a].get] urem [[b].get] to [[a.type_].ir]]];
     } elif ([a.type_].is_signed_int) {
-        return basic val [a.type_] [emit [[[a].get] smod [[b].get] to [[a.type_].ir]]];
+        return basic val [a.type_] [emit [[[a].get] srem [[b].get] to [[a.type_].ir]]];
     } else {
-        return basic val [a.type_] [emit [[[a].get] fmod [[b].get] to [[a.type_].ir]]];
+        return basic val [a.type_] [emit [[[a].get] frem [[b].get] to [[a.type_].ir]]];
     };
 }
 
