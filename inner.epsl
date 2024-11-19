@@ -388,6 +388,9 @@ IRValue#compute truth value <Type_:type_> <IRValue:val> {
         return val;
     } elif ([type_.name] equals ["Optional"]) {
         return emit [compare int [val] ["ne"] [make const null_]];
+    } elif ([type_.name] equals ["Array"]) {
+        IRValue:length = [[basic val [type_] [val]].length].get;
+        return emit [compare int [length] ["ne"] [make const [0] [64]]];
     } elif ([type_].is_int) {
         return emit [compare int [val] ["ne"] [make const [0] [(W)type_.bits]]];
     } elif ([type_].is_float) {
@@ -400,7 +403,7 @@ IRValue#compute truth value <Type_:type_> <IRValue:val> {
         return make const [true];
     };
 
-    abort "Can't compute the truth value of type_ {}" % [type_].stringify;
+    abort "Don't know how to compute the truth value of type_ {}" % [type_].stringify;
 }
 
 IRValue#compute untruth value <Type_:type_> <IRValue:val> {
@@ -408,7 +411,10 @@ IRValue#compute untruth value <Type_:type_> <IRValue:val> {
         return bitwise not [type_] [val];
     } elif ([type_.name] equals ["Optional"]) {
         return emit [compare int [val] ["eq"] [make const null_]];
-    } elif ([type_].is_int) {
+    }elif ([type_.name] equals ["Array"]) {
+        IRValue:length = [[basic val [type_] [val]].length].get;
+        return emit [compare int [length] ["eq"] [make const [0] [64]]];
+    }  elif ([type_].is_int) {
         return emit [compare int [val] ["eq"] [make const [0] [(W)type_.bits]]];
     } elif ([type_].is_float) {
         return emit [compare float [val] ["oeq"] [make const [0.0] [(W)type_.bits]]];
@@ -420,7 +426,7 @@ IRValue#compute untruth value <Type_:type_> <IRValue:val> {
         return make const [false];
     };
     
-    abort "Can't compute the untruth value of type_ {}" % [type_].stringify;
+    abort "Don't know how to compute the untruth value of type_ {}" % [type_].stringify;
 }
 
 IRValue#convert integer <IRValue:val> bits from <Type_:from> to <Type_:to> {
