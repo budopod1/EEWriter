@@ -31,14 +31,14 @@ State#get state {
     };
 }
 
-#init state <Str:filename> {
+#init state [Str:filename] {
     state = State [
         filename, [Func_] [], [ExternFunc] [], [Func_] [], false, null,
         [Struct_] [], [IRGlobal] []
     ];
 }
 
-IRStructDef#<Struct_:struct_>.ir {
+IRStructDef#[Struct_:struct_].ir {
     [IRType]:members = [IRType] [];
     if (struct_.is_ref) {
         // add the ref counter field
@@ -77,7 +77,7 @@ Func_#get active func {
     return [func_stack].at[-1];
 }
 
-ExternFunc?#get func named <Str:name> {
+ExternFunc?#get func named [Str:name] {
     for (Func_:func in get state.funcs) {
         if ([func.base.ir_func.name] equals [name]) {
             return func.base;
@@ -99,7 +99,7 @@ Bool#is next fn private {
     return is_private;
 }
 
-ExternFunc#create new extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <Bool:has_vargs> private: <Bool:is_private> {
+ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] private: [Bool:is_private] {
     [IRRegister]:register_args = [IRRegister] [];
     for (W:i enumerating arg_types_) {
         [register_args].append[IRRegister [false, "arg{}" % i, [arg_types_[i]].ir]];
@@ -112,7 +112,7 @@ ExternFunc#create new extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types
     return ExternFunc [ir, ret_type_, arg_types_];
 }
 
-Bool#extern func matches <ExternFunc:fn> <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <Bool:has_vargs> {
+Bool#extern func matches [ExternFunc:fn] [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] {
     if ([fn.ir_func.name] not equals [name]) {
         return false;
     };
@@ -133,7 +133,7 @@ Bool#extern func matches <ExternFunc:fn> <Type_?:ret_type_> <Str:name> <[Type_]:
     return true;
 }
 
-ExternFunc#require extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> <Bool:has_vargs> private: <Bool:is_private> {
+ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] private: [Bool:is_private] {
     ExternFunc?:maybe_fn = get func named [name];
     if (maybe_fn) {
         ExternFunc:fn = [maybe_fn].unwrap;
@@ -150,7 +150,7 @@ ExternFunc#require extern fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> 
     return extern_func;
 }
 
-Func_?#defined fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
+Func_?#defined fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
     for (Func_:func in get state.funcs) {
         if ([func.base.ir_func.name] equals [name]) {
             if (extern func matches [func.base] [ret_type_] [name] [arg_types_] [false]) {
@@ -164,7 +164,7 @@ Func_?#defined fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
     return null;
 }
 
-Func_#new fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> private: <Bool:is_private> {
+Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] private: [Bool:is_private] {
     [ExternFunc]:extern_funcs = get state.extern_funcs;
     for (W:i enumerating extern_funcs step -1) {
         ExternFunc:extern_func = extern_funcs[i];
@@ -184,13 +184,13 @@ Func_#new fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> private: <Bool:i
     return Func_ [base, [Block] [], entry_bb, null];
 }
 
-#add fn <Func_:func> {
+#add fn [Func_:func] {
     State:state = get state;
     [state.func_stack].append[func];
     [state.funcs].append[func];
 }
 
-#add block <Block:block> to stack {
+#add block [Block:block] to stack {
     [get active func.block_stack].append[block];
 }
 
@@ -199,7 +199,7 @@ Block#pop from block stack {
     return [block_stack].pop_end;
 }
 
-IRType#<Type_?:maybe_type_>.ir {
+IRType#[Type_?:maybe_type_].ir {
     if (maybe_type_) {
         return [[maybe_type_].unwrap].ir;
     } else {
@@ -207,7 +207,7 @@ IRType#<Type_?:maybe_type_>.ir {
     };
 }
 
-IRType#<Type_:type_>.ir {
+IRType#[Type_:type_].ir {
     if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"]) 
         || ([type_.name] equals ["Z"])) {
         return int type [(W)type_.bits];
@@ -239,7 +239,7 @@ IRType#<Type_:type_>.ir {
     };
 }
 
-IRType#<Type_:type_>.pointee {
+IRType#[Type_:type_].pointee {
     if ([type_.name] equals ["Array"]) {
         return struct_ type [[IRType] [int type [64], int type [64], int type [64], ptr type]];
     } elif ([type_.name] equals ["Pointer"]) {
@@ -266,7 +266,7 @@ IRType#<Type_:type_>.pointee {
     };
 }
 
-IRValue#<Val:val>.get {
+IRValue#[Val:val].get {
     if (val.basic) {
         return [val.basic].unwrap.val;
     } elif (val.assignable) {
@@ -288,7 +288,7 @@ IRBasicBlock#new bb {
     return bb;
 }
 
-#set current bb <IRBasicBlock:bb> {
+#set current bb [IRBasicBlock:bb] {
     get active func.current_bb = bb;
 }
 
@@ -296,28 +296,28 @@ W#next id {
     return [get active func.base.ir_func.body].unwrap.id_counter++;
 }
 
-Str#name register <W:id> {
+Str#name register [W:id] {
     return ".{}" % id;
 }
 
-IRRegister#new register <IRType:type> {
+IRRegister#new register [IRType:type] {
     return IRRegister [false, name register [next id], type];
 }
 
-IRValue#make_val <IRRegister:reg> {
+IRValue#make_val [IRRegister:reg] {
     return IRValue [reg, null];
 }
 
-IRValue#make_val <IRValuedInstruction:valued> {
+IRValue#make_val [IRValuedInstruction:valued] {
     return make_val [valued.register];
 }
 
-IRValue#emit <IRValuedInstruction:valued> {
+IRValue#emit [IRValuedInstruction:valued] {
     [current bb.instructions].append[make instruction [valued]];
     return make_val [valued];
 }
 
-#emit <IRInstruction:instruction> {
+#emit [IRInstruction:instruction] {
     [current bb.instructions].append[instruction];
     if (instruction.ret_void || instruction.ret || instruction.conditional_branch
         || instruction.unconditional_branch || instruction.switch_ || instruction.unreachable) {
@@ -325,33 +325,33 @@ IRValue#emit <IRValuedInstruction:valued> {
     };
 }
 
-#emit <IRInstruction:instruction> unless terminated {
+#emit [IRInstruction:instruction] unless terminated {
     if (!current bb.is_terminated) {
         emit [instruction];
     };
 }
 
-IRRegister#register of func <IRFunc:func> {
+IRRegister#register of func [IRFunc:func] {
     return IRRegister [true, func.name, ptr type];
 }
 
-IRValue#<IRFunc:func>.make_ptr {
+IRValue#[IRFunc:func].make_ptr {
     return make_val [register of func [func]];
 }
 
-Val#basic val <Type_:type_> <IRValue:val> {
+Val#basic val [Type_:type_] [IRValue:val] {
     return Val [type_, BasicVal [val, current bb], null, null];
 }
 
-Val#assignable val <Type_:type_> <IRValue:addr> {
+Val#assignable val [Type_:type_] [IRValue:addr] {
     return Val [type_, null, AssignableVal [addr], null];
 }
 
-Val#const val <Type_:type_> <IRValue:val> {
+Val#const val [Type_:type_] [IRValue:val] {
     return Val [type_, null, null, ConstVal [val]];
 }
 
-#call <Type_?:ret_type_> <IRRegister:register> <[Type_]:arg_types_> <[Val]:args> {
+#call [Type_?:ret_type_] [IRRegister:register] [[Type_]:arg_types_] [[Val]:args] {
     [IRValue]:arg_vals = [IRValue] [];
     if ([args].len < [arg_types_].len) {
         abort "Not enough arguments for function";
@@ -376,11 +376,11 @@ Val#const val <Type_:type_> <IRValue:val> {
     };
 }
 
-IRValue#bitwise not <Type_:type_> <IRValue:val> {
+IRValue#bitwise not [Type_:type_] [IRValue:val] {
     return emit [[val] XOR [make const [-1] [(W)type_.bits]] to [[type_].ir]];
 }
 
-IRValue#compute truth value <Type_:type_> <IRValue:val> {
+IRValue#compute truth value [Type_:type_] [IRValue:val] {
     if ([type_].is_int && type_.bits == 1) {
         return val;
     } elif ([type_.name] equals ["Optional"]) {
@@ -403,7 +403,7 @@ IRValue#compute truth value <Type_:type_> <IRValue:val> {
     abort "Don't know how to compute the truth value of type_ {}" % [type_].stringify;
 }
 
-IRValue#compute untruth value <Type_:type_> <IRValue:val> {
+IRValue#compute untruth value [Type_:type_] [IRValue:val] {
     if ([type_].is_int && type_.bits == 1) {
         return bitwise not [type_] [val];
     } elif ([type_.name] equals ["Optional"]) {
@@ -426,7 +426,7 @@ IRValue#compute untruth value <Type_:type_> <IRValue:val> {
     abort "Don't know how to compute the untruth value of type_ {}" % [type_].stringify;
 }
 
-IRValue#convert integer <IRValue:val> bits from <Type_:from> to <Type_:to> {
+IRValue#convert integer [IRValue:val] bits from [Type_:from] to [Type_:to] {
     if (to.bits > from.bits) {
         if ([from].is_signed_int) {
             return emit [sign extend [val] to [[to].ir]];
@@ -440,7 +440,7 @@ IRValue#convert integer <IRValue:val> bits from <Type_:from> to <Type_:to> {
     };
 }
 
-IRValue#convert float <IRValue:val> bits from <Type_:from> to <Type_:to> {
+IRValue#convert float [IRValue:val] bits from [Type_:from] to [Type_:to] {
     if (to.bits > from.bits) {
         return emit [float extend [val] to [[to].ir]];
     } elif (to.bits < from.bits) {
@@ -450,7 +450,7 @@ IRValue#convert float <IRValue:val> bits from <Type_:from> to <Type_:to> {
     };
 }
 
-IRValue#cast <IRValue:val> from <Type_:from> to <Type_:to> {
+IRValue#cast [IRValue:val] from [Type_:from] to [Type_:to] {
     if ([from] == [to]) {
         return val;
     } elif (([from.name] equals ["Optional"]) && ([from.generics[0]] == [to])) {
@@ -488,7 +488,7 @@ IRValue#cast <IRValue:val> from <Type_:from> to <Type_:to> {
     abort "There is no known way to cast values of type_ {} to {}" % [from].stringify % [to].stringify;
 }
 
-Val#do_Val_cmp<Val:a><Str:cmpop><Val:b> {
+Val#do_Val_cmp[Val:a][Str:cmpop][Val:b] {
     assert type_ equality [a], [b];
     if ([a.type_].is_float) {
         return basic val [Bool_] [emit [compare float [[a].get] [["o"]+[cmpop]] [[b].get]]];
@@ -510,7 +510,7 @@ Val#do_Val_cmp<Val:a><Str:cmpop><Val:b> {
     };
 }
 
-Val#access field <W:nth> of <Val:val> as <Type_:type_> {
+Val#access field [W:nth] of [Val:val] as [Type_:type_] {
     return basic val [Pointer [type_]] [emit [
         GEP [[val.type_].pointee] [[val].get] [[IRValue] [
             make const [0] [64], make const [nth]
@@ -518,7 +518,7 @@ Val#access field <W:nth> of <Val:val> as <Type_:type_> {
     ]];
 }
 
-IRConstant#get_const_from_val<Val:val> {
+IRConstant#get_const_from_val[Val:val] {
     if (val.const) {
         IRValue:ir_val = [val.const].unwrap.val;
         if (ir_val.constant) {
@@ -528,7 +528,7 @@ IRConstant#get_const_from_val<Val:val> {
     abort "Expected constant";
 }
 
-IRValue#make_global <IRType:ir_type> <Str?:provided_name> <IRConstant?:basic_init> <Str?:str_init> <Bool:is_const> {
+IRValue#make_global [IRType:ir_type] [Str?:provided_name] [IRConstant?:basic_init] [Str?:str_init] [Bool:is_const] {
     Bool:insignificant_name = [provided_name].is_null;
     if (!provided_name) {
         Str:frmt_str = "global_{}_{}";
@@ -550,7 +550,7 @@ IRValue#make_global <IRType:ir_type> <Str?:provided_name> <IRConstant?:basic_ini
     return IRValue [register, null];
 }
 
-L#index of field <Str:name> in <Struct_:struct_> {
+L#index of field [Str:name] in [Struct_:struct_] {
     for (L:i enumerating struct_.fields) {
         if ([struct_.fields[i].name] equals [name]) {
             return i;
@@ -559,7 +559,7 @@ L#index of field <Str:name> in <Struct_:struct_> {
     abort "Field {} not found in struct {}" % name % struct_.id;
 }
 
-#<Val:val>._nonnull_check_ref<Val:rc> {
+#[Val:val]._nonnull_check_ref[Val:rc] {
     assert [val] is nonnullable;
     assert [val] is ref;
     Type_:type_ = val.type_;
@@ -584,7 +584,7 @@ end fn;
 };
 }
 
-#<Val:val>._ref_free_array {
+#[Val:val]._ref_free_array {
     assert [val] is array;
 
     Type_:sub = val.type_.generics[0];
@@ -620,7 +620,7 @@ end fn;
     free [val];
 }
 
-#<Val:val>._ref_free_struct {
+#[Val:val]._ref_free_struct {
     Struct_:struct_ = assert [val] is ref struct_;
     for (L:i enumerating struct_.fields) {
         [load [[val].[i]]].decr_ref;
