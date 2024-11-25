@@ -711,7 +711,7 @@ Bool#specialized fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> {
 #end fn {
     require basic block termination;
     [Func_]:func_stack = get state.func_stack;
-    [func_stack].pop[[func_stack].len-1];
+    [func_stack].pop_end;
 }
 
 Val#func ret {
@@ -756,7 +756,7 @@ Val#alloca <Val:count> <Type_:type_> {
 
 Block#current block {
     [Block]:block_stack = get active func.block_stack;
-    return block_stack[[block_stack].len-1];
+    return [block_stack].at[-1];
 }
 
 Bool#is block terminated {

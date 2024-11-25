@@ -74,7 +74,7 @@ IRModule#build module {
 
 Func_#get active func {
     [Func_]:func_stack = get state.func_stack;
-    return func_stack[[func_stack].len-1];
+    return [func_stack].at[-1];
 }
 
 ExternFunc?#get func named <Str:name> {
@@ -196,7 +196,7 @@ Func_#new fn <Type_?:ret_type_> <Str:name> <[Type_]:arg_types_> private: <Bool:i
 
 Block#pop from block stack {
     [Block]:block_stack = get active func.block_stack;
-    return [block_stack].pop[[block_stack].len-1];
+    return [block_stack].pop_end;
 }
 
 IRType#<Type_?:maybe_type_>.ir {
