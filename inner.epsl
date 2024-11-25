@@ -63,10 +63,8 @@ IRModule#build module {
     for (Func_:func in state.funcs) {
         [ir_funcs].append[func.base.ir_func];
     };
-    // TODO: use non-default values for target triple & datalayout
     return IRModule [
-        "x86_64-unknown-linux-gnu", "", state.filename, 
-        state.globals, ir_structs, ir_funcs
+        "", "", state.filename, state.globals, ir_structs, ir_funcs
     ];
 }
 
@@ -124,7 +122,6 @@ Bool#extern func matches <ExternFunc:fn> <Type_?:ret_type_> <Str:name> <[Type_]:
     if (![fn.ret_type_] == [ret_type_]) {
         return false;
     };
-    // TODO: replace fn.args vs arg_types_ equality checking with 'deep equals' once implemented
     if ([fn.args].len != [arg_types_].len) {
         return false;
     };
@@ -456,14 +453,9 @@ IRValue#convert float <IRValue:val> bits from <Type_:from> to <Type_:to> {
 IRValue#cast <IRValue:val> from <Type_:from> to <Type_:to> {
     if ([from] == [to]) {
         return val;
-    } elif (([from.name] equals ["Optional"]) && ([from.generics[0]?] == [(Type_?)to])) {
-        return val;
-    } elif (([to.name] equals ["Optional"]) && ([to.generics[0]?] == [(Type_?)from])) {
-/* TODO: replace the above 3 lines with:
     } elif (([from.name] equals ["Optional"]) && ([from.generics[0]] == [to])) {
         return val;
     } elif (([to.name] equals ["Optional"]) && ([to.generics[0]] == [from])) {
-once && short circuts */
         return val;
     } elif ([to.name] equals ["Bool"]) {
         return compute truth value [from] [val];

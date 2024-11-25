@@ -1,4 +1,3 @@
-.eewriter.epslcache
-*.epslspec
-*.o
-*.ll
+eewriter/
+.*
+!.gitignore
