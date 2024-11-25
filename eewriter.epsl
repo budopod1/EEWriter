@@ -77,31 +77,12 @@ Type_ {
     [Type_]:generics
 }
 
-// FIXME: once the `deep equals` builtin is implemented, this function won't be needed
 Bool#<Type_:a> == <Type_:b> {
-    if ([a.name] not equals [b.name]) {
-        return false;
-    };
-    if (a.bits != b.bits) {
-        return false;
-    };
-    if ([a.generics].len != [b.generics].len) {
-        return false;
-    };
-    for (W:i enumerating a.generics) {
-        if (![a.generics[i]] == [b.generics[i]]) {
-            return false;
-        };
-    };
-    return true;
+    return [a] deep equals [b];
 }
 
 Bool#<Type_?:a> == <Type_?:b> {
-    if (a && b) {
-        return [[a].unwrap] == [[b].unwrap];
-    } else {
-        return [a].is_null && [b].is_null;
-    };
+    return [a] deep equals [b];
 }
 
 Type_#Null_ {
