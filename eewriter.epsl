@@ -947,14 +947,14 @@ Val#realloc [Val:val] to [Val:count] elements {
 }
 
 #memcpy [Val:count] [Val:v1] to [Val:v2] {
-    extern fn [null] ["memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
+    extern fn [Internal_] ["epsl_memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
         cast [v2] to [Internal_], cast [v1] to [Internal_],
         [sizeof pointee [v1.type_]] * [cast [count] to [L_]]
     ]];
 }
 
 #memcpy [Val:v1] to [Val:v2] {
-    extern fn [null] ["memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
+    extern fn [Internal_] ["epsl_memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
         cast [v2] to [Internal_], cast [v1] to [Internal_], sizeof pointee [v1.type_]
     ]];
 }
@@ -1133,7 +1133,7 @@ Val#new ref struct_ [Type_:type_] [[Val]:fields] {
 }
 
 #printf [Str:template] [[Val]:vals] {
-    extern fn [null] ["printf"] [[Type_] [Pointer [Byte_]]] vargs
+    extern fn [Z_] ["epsl_printf"] [[Type_] [Pointer [Byte_]]] vargs
         [[[Val] [const str [template]]] + [vals]];
 }
 
