@@ -188,7 +188,7 @@ Str#[Type_:type_].stringify {
         };
         [generic_txt].extend[[generic].stringify];
     };
-    
+
     if (type_.bits == -1) {
         return "{}<{}>" % type_.name % generic_txt;
     } else {
@@ -521,7 +521,7 @@ Val#[Val:a] shift left [Val:b] {
     if (a.type_.bits != b.type_.bits) {
         abort "Both operands in a bitshift must have the same number of bits";
     };
-    
+
     return basic val [a.type_] [emit [[[a].get] left shift [[b].get] to [[a.type_].ir]]];
 }
 
@@ -532,7 +532,7 @@ Val#[Val:a] shift right [Val:b] {
     if (a.type_.bits != b.type_.bits) {
         abort "Both operands in a bitshift must have the same number of bits";
     };
-    
+
     if ([a.type_].is_signed_int) {
         return basic val [a.type_] [emit [[[a].get] signed right shift [[b].get] to [[a.type_].ir]]];
     } else {
@@ -948,7 +948,7 @@ Val#realloc [Val:val] to [Val:count] elements {
 
 #memcpy [Val:count] [Val:v1] to [Val:v2] {
     extern fn [null] ["memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
-        cast [v2] to [Internal_], cast [v1] to [Internal_], 
+        cast [v2] to [Internal_], cast [v1] to [Internal_],
         [sizeof pointee [v1.type_]] * [cast [count] to [L_]]
     ]];
 }
@@ -1082,7 +1082,7 @@ Val#new array [Type_:type_] [[Val]:vals] with capacity [L:capacity] {
 
     Val:result = malloc pointee [type_];
     [result].init_ref;
-    
+
     if (capacity < [vals].len) {
         capacity = [vals].len;
     };
@@ -1098,7 +1098,7 @@ Val#new array [Type_:type_] [[Val]:vals] with capacity [L:capacity] {
         [[content].idx[c L_ [i]]] = [vals[i]];
     };
     [[result].content] = [content];
-    
+
     return result;
 }
 
@@ -1111,7 +1111,7 @@ Val#new ref struct_ [Type_:type_] [[Val]:fields] {
     if ([maybe_struct].is_null) {
         abort "Expected struct type_, found {}" % type_.name;
     };
-    
+
     Struct_:struct_ = [maybe_struct].unwrap;
     if (!struct_.is_ref) {
         abort "Expected ref struct type_, found {}" % struct_.id;
@@ -1119,7 +1119,7 @@ Val#new ref struct_ [Type_:type_] [[Val]:fields] {
 
     Val:result = malloc pointee [type_];
     [result].init_ref;
-    
+
     for (L:i enumerating fields) {
         Val:field_val = fields[i];
         Field:struct_field = struct_.fields[i];
@@ -1128,7 +1128,7 @@ Val#new ref struct_ [Type_:type_] [[Val]:fields] {
         };
         [[result].[i]] = [field_val];
     };
-    
+
     return result;
 }
 

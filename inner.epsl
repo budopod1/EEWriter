@@ -160,7 +160,7 @@ Func_?#defined fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
             };
         };
     };
-    
+
     return null;
 }
 
@@ -176,7 +176,7 @@ Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] private: [Bool:i
             };
         };
     };
-    
+
     ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false] private: [is_private];
     IRBasicBlock:entry_bb = IRBasicBlock [0, [IRInstruction] [], false];
     [IRBasicBlock]:basic_blocks = [IRBasicBlock] [entry_bb];
@@ -208,12 +208,12 @@ IRType#[Type_?:maybe_type_].ir {
 }
 
 IRType#[Type_:type_].ir {
-    if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"]) 
+    if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"])
         || ([type_.name] equals ["Z"])) {
         return int type [(W)type_.bits];
     } elif ([type_.name] equals ["Q"]) {
         return float type [(W)type_.bits];
-    } elif (([type_.name] equals ["Null"]) || ([type_.name] equals ["Optional"]) 
+    } elif (([type_.name] equals ["Null"]) || ([type_.name] equals ["Optional"])
         || ([type_.name] equals ["Array"]) || ([type_.name] equals ["Internal"])
         || ([type_.name] equals ["Pointer"]) || ([type_.name] equals ["FuncPtr"])
         || ([type_.name] equals ["VoidFuncPtr"])) {
@@ -366,7 +366,7 @@ Val#const val [Type_:type_] [IRValue:val] {
     };
 
     W:varg_count = [args].len - [arg_types_].len;
-    
+
     if (ret_type_) {
         Type_:known_ret_type_ = [ret_type_].unwrap;
         IRValue:result = emit [call [[known_ret_type_].ir] [register] [arg_vals] [varg_count]];
@@ -422,7 +422,7 @@ IRValue#compute untruth value [Type_:type_] [IRValue:val] {
     } elif ([type_].get_struct) {
         return make const [false];
     };
-    
+
     abort "Don't know how to compute the untruth value of type_ {}" % [type_].stringify;
 }
 
@@ -484,7 +484,7 @@ IRValue#cast [IRValue:val] from [Type_:from] to [Type_:to] {
     } elif ([to.name] equals ["Pointer"]) {
         return val;
     };
-    
+
     abort "There is no known way to cast values of type_ {} to {}" % [from].stringify % [to].stringify;
 }
 
