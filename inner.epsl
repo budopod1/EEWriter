@@ -420,10 +420,10 @@ IRValue#compute untruth value [Type_:type_] [IRValue:val] {
         return bitwise not [type_] [val];
     } elif ([type_.name] equals ["Optional"]) {
         return emit [compare int [val] ["eq"] [make const null_]];
-    }elif ([type_.name] equals ["Array"]) {
+    } elif ([type_.name] equals ["Array"]) {
         IRValue:length = [[basic val [type_] [val]].length].get;
         return emit [compare int [length] ["eq"] [make const [0] [64]]];
-    }  elif ([type_].is_int) {
+    } elif ([type_].is_int) {
         return emit [compare int [val] ["eq"] [make const [0] [(W)type_.bits]]];
     } elif ([type_].is_float) {
         return emit [compare float [val] ["oeq"] [make const [0.0] [(W)type_.bits]]];
