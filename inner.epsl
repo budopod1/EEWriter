@@ -10,7 +10,8 @@ State {
     Bool:next_fn_private,
     ExternFunc?:last_defined_func,
     [Struct_]:structs,
-    [IRGlobal]:globals
+    [IRGlobal]:globals,
+    Val?:error_stack_top
 }
 
 // in the future this will @extend ExternFunc
@@ -34,7 +35,7 @@ State#get state {
 #init state [Str:filename] {
     state = State [
         filename, [Func_] [], [ExternFunc] [], [Func_] [], false, null,
-        [Struct_] [], [IRGlobal] []
+        [Struct_] [], [IRGlobal] [], null
     ];
 }
 
@@ -91,6 +92,17 @@ ExternFunc?#get func named [Str:name] {
     };
 
     return null;
+}
+
+Val#get error stack top {
+    State:state = get state;
+    if (state.error_stack_top) {
+        return [state.error_stack_top].unwrap;
+    };
+    Val:error_stack_top = extern global [Pointer [Pointer [Byte_]]]
+        ["epsl_error_stack_top"];
+    state.error_stack_top = error_stack_top;
+    return error_stack_top;
 }
 
 Bool#is next fn private {
@@ -528,7 +540,7 @@ IRConstant#get_const_from_val[Val:val] {
     abort "Expected constant";
 }
 
-IRValue#make_global [IRType:ir_type] [Str?:provided_name] [IRConstant?:basic_init] [Str?:str_init] [Bool:is_const] {
+IRValue#make_global type: [IRType:ir_type] name: [Str?:provided_name] basic_init: [IRConstant?:basic_init] str_init: [Str?:str_init] is_extern: [Bool:is_extern] is_const: [Bool:is_const] {
     Bool:insignificant_name = [provided_name].is_null;
     if (!provided_name) {
         Str:frmt_str = "global_{}_{}";
@@ -540,7 +552,12 @@ IRValue#make_global [IRType:ir_type] [Str?:provided_name] [IRConstant?:basic_ini
     Str:name = [provided_name].unwrap;
     IRRegister:register = IRRegister [true, name, ptr type];
     Str?:linkage = null;
-    if (insignificant_name) {
+    if (is_extern) {
+        if (basic_init || str_init) {
+            abort "Extern globals cannot have an initializer";
+        };
+        linkage = "external";
+    } elif (insignificant_name) {
         linkage = "private";
     };
     Bool:named_addr = !insignificant_name;

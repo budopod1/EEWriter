@@ -1039,7 +1039,9 @@ Val#make global [Type_:type_] [Str?:name] [Val?:init] {
     if (init) {
         const_init = get_const_from_val[[init].unwrap];
     };
-    IRValue:ir_ptr = make_global[[type_].ir][name][const_init][null][false];
+    IRValue:ir_ptr = make_global type: [[type_].ir] name: [name]
+        basic_init: [const_init] str_init: [null] is_extern: [false]
+        is_const: [false];
     return assignable val [type_] [ir_ptr];
 }
 
@@ -1048,20 +1050,31 @@ Val#make ptr to global [Type_:type_] [Str?:name] [Val?:init] {
     if (init) {
         const_init = get_const_from_val[[init].unwrap];
     };
-    IRValue:ir_ptr = make_global[[type_].ir][name][const_init][null][false];
+    IRValue:ir_ptr = make_global type: [[type_].ir] name: [name]
+        basic_init: [const_init] str_init: [null] is_extern: [false] is_const: [false];
     return const val [Pointer [type_]] [ir_ptr];
+}
+
+Val#extern global [Type_:type_] [Str:name] {
+    return assignable val [type_] [
+        make_global type: [[type_].ir] name: [name] basic_init: [null]
+            str_init: [null] is_extern: [true] is_const: [false]
+    ];
 }
 
 Val#make const [Type_:type_] [Str?:name] [Val:init] {
     return assignable val [type_] [
-        make_global[[type_].ir][name][get_const_from_val[init]][null][true]
+        make_global type: [[type_].ir] name: [name]
+            basic_init: [get_const_from_val[init]] str_init: [null]
+            is_extern: [false] is_const: [true]
     ];
 }
 
 Val#const str [Str:str] {
     IRType:type = array type [[str].len]x[int type [8]];
     return const val [Pointer [Byte_]] [
-        make_global[type][null][null][str][true]
+        make_global type: [type] name: [null] basic_init: [null] str_init: [str]
+            is_extern: [false] is_const: [true]
     ];
 }
 
@@ -1073,6 +1086,20 @@ Val#mut str [Str:str] with [W:extra_cap] extra capacity {
 
 Val#mut str [Str:str] {
     return mut str [str] with [0] extra capacity;
+}
+
+#add error frame [Str:frame] {
+    // *++epsl_error_stack_top = frame;
+    Val:error_stack_top = get error stack top;
+    Val:new_top = [error_stack_top] shifted by [c L_ [1]];
+    [*[new_top]] = [const str [frame]];
+    [error_stack_top] = [new_top];
+}
+
+#remove error frame {
+    Val:error_stack_top = get error stack top;
+    Val:new_top = [error_stack_top] shifted by [c [-1]];
+    [error_stack_top] = [new_top];
 }
 
 Val#new array [Type_:type_] [[Val]:vals] with capacity [L:capacity] {
