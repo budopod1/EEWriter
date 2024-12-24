@@ -226,31 +226,39 @@ IRType#array type [W:elem_count]x[IRType:elem_type] {
 }
 
 IRValue#make const [Bool:val] {
-    return IRValue [null, IRConstant [int type [1], IRIntConstant [val], null, null]];
+    return IRValue [null, IRConstant [int type [1], IRIntConstant [val], null, null, null, null]];
 }
 
 IRValue#make const [Byte:val] {
-    return IRValue [null, IRConstant [int type [8], IRIntConstant [val], null, null]];
+    return IRValue [null, IRConstant [int type [8], IRIntConstant [val], null, null, null, null]];
 }
 
 // Seperate W_ versions are unnecessary, as LLVM does not distinguish between signed
 // and unsigned integers
 IRValue#make const [Z:val] {
-    return IRValue [null, IRConstant [int type [32], IRIntConstant [val], null, null]];
+    return IRValue [null, IRConstant [int type [32], IRIntConstant [val], null, null, null, null]];
 }
 
 IRValue#make const [Z:val] [W:bits] {
-    return IRValue [null, IRConstant [int type [bits], IRIntConstant [val], null, null]];
+    return IRValue [null, IRConstant [int type [bits], IRIntConstant [val], null, null, null, null]];
 }
 
 IRValue#make const [Q:val] {
-    return IRValue [null, IRConstant [float type [64], null, IRFloatConstant [val], null]];
+    return IRValue [null, IRConstant [float type [64], null, IRFloatConstant [val], null, null, null]];
 }
 
 IRValue#make const [Q:val] [W:bits] {
-    return IRValue [null, IRConstant [float type [bits], null, IRFloatConstant [val], null]];
+    return IRValue [null, IRConstant [float type [bits], null, IRFloatConstant [val], null, null, null]];
+}
+
+IRValue#make const [IRType:type] [[IRConstant]:elements] {
+    return IRValue [null, IRConstant [type, null, null, IRStructConstant [elements], null, null]];
+}
+
+IRValue#make const [IRType:type] [IRRegister:global_ptr] {
+    return IRValue [null, IRConstant [type, null, null, null, IRGlobalPtrConstant [global_ptr], null]];
 }
 
 IRValue#make const null_ {
-    return IRValue [null, IRConstant [ptr type, null, null, IRNullConstant []]];
+    return IRValue [null, IRConstant [ptr type, null, null, null, null, IRNullConstant []]];
 }

@@ -564,7 +564,7 @@ IRValue#make_global type: [IRType:ir_type] name: [Str?:provided_name] basic_init
     [get state.globals].append[IRGlobal [
         register, linkage, named_addr, is_const, ir_type, basic_init, str_init
     ]];
-    return IRValue [register, null];
+    return make const [ptr type] [register];
 }
 
 L#index of field [Str:name] in [Struct_:struct_] {

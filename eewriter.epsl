@@ -181,7 +181,7 @@ Str#[Type_:type_].stringify {
         };
     };
 
-    Str:generic_txt = "";
+    Str:generic_txt = [""].clone;
     for (Type_:generic in type_.generics) {
         if ([generic_txt].len) {
             [generic_txt].extend[", "];
@@ -1040,8 +1040,7 @@ Val#make global [Type_:type_] [Str?:name] [Val?:init] {
         const_init = get_const_from_val[[init].unwrap];
     };
     IRValue:ir_ptr = make_global type: [[type_].ir] name: [name]
-        basic_init: [const_init] str_init: [null] is_extern: [false]
-        is_const: [false];
+        basic_init: [const_init] str_init: [null] is_extern: [false] is_const: [false];
     return assignable val [type_] [ir_ptr];
 }
 
@@ -1053,6 +1052,18 @@ Val#make ptr to global [Type_:type_] [Str?:name] [Val?:init] {
     IRValue:ir_ptr = make_global type: [[type_].ir] name: [name]
         basic_init: [const_init] str_init: [null] is_extern: [false] is_const: [false];
     return const val [Pointer [type_]] [ir_ptr];
+}
+
+Val#make global struct_ [Type_:type_] [Str?:name] [[Val]:elements] {
+    [IRConstant]:const_elements = [IRConstant] [];
+    for (Val:element in elements) {
+        [const_elements].append[get_const_from_val[element]];
+    };
+    IRType:pointee = [type_].pointee;
+    IRConstant:const_init = [make const [pointee] [const_elements].constant].unwrap;
+    IRValue:ir_ptr = make_global type: [pointee] name: [name]
+        basic_init: [const_init] str_init: [null] is_extern: [false] is_const: [false];
+    return const val [type_] [ir_ptr];
 }
 
 Val#extern global [Type_:type_] [Str:name] {
@@ -1078,6 +1089,14 @@ Val#const str [Str:str] {
     ];
 }
 
+Val#global mut str [Str:str] {
+    IRType:type = array type [[str].len]x[int type [8]];
+    return const val [Pointer [Byte_]] [
+        make_global type: [type] name: [null] basic_init: [null] str_init: [str]
+            is_extern: [false] is_const: [false]
+    ];
+}
+
 Val#mut str [Str:str] with [W:extra_cap] extra capacity {
     Val:result = malloc [c L_ [[str].len + extra_cap]] [Byte_];
     memcpy [c L_ [[str].len]] [const str [str]] to [result];
@@ -1088,11 +1107,11 @@ Val#mut str [Str:str] {
     return mut str [str] with [0] extra capacity;
 }
 
-#add error frame [Str:frame] {
+#add error frame [Str:frame_str] {
     // *++epsl_error_stack_top = frame;
     Val:error_stack_top = get error stack top;
     Val:new_top = [error_stack_top] shifted by [c L_ [1]];
-    [*[new_top]] = [const str [frame]];
+    [*[new_top]] = [const str [[frame_str] + ["\0"]]];
     [error_stack_top] = [new_top];
 }
 
