@@ -7,7 +7,7 @@ State {
     [Func_]:funcs,
     [ExternFunc]:extern_funcs,
     [Func_]:func_stack,
-    Bool:next_fn_private,
+    Str?:next_fn_specifiers,
     ExternFunc?:last_defined_func,
     [Struct_]:structs,
     [IRGlobal]:globals,
@@ -34,7 +34,7 @@ State#get state {
 
 #init state [Str:filename] {
     state = State [
-        filename, [Func_] [], [ExternFunc] [], [Func_] [], false, null,
+        filename, [Func_] [], [ExternFunc] [], [Func_] [], null, null,
         [Struct_] [], [IRGlobal] [], null
     ];
 }
@@ -105,22 +105,18 @@ Val#get error stack top {
     return error_stack_top;
 }
 
-Bool#is next fn private {
-    Bool:is_private = get state.next_fn_private;
-    get state.next_fn_private = false;
-    return is_private;
+Str#next fn specifiers {
+    Str?:specifiers = get state.next_fn_specifiers;
+    get state.next_fn_specifiers = null;
+    return [specifiers] || [""];
 }
 
-ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] private: [Bool:is_private] {
+ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] {
     [IRRegister]:register_args = [IRRegister] [];
     for (W:i enumerating arg_types_) {
         [register_args].append[IRRegister [false, "arg{}" % i, [arg_types_[i]].ir]];
     };
-    Str?:linkage = null;
-    if (is_private) {
-        linkage = "private";
-    };
-    IRFunc:ir = IRFunc [[ret_type_].ir, linkage, name, register_args, has_vargs, null];
+    IRFunc:ir = IRFunc [[ret_type_].ir, specifiers, name, register_args, has_vargs, null];
     return ExternFunc [ir, ret_type_, arg_types_];
 }
 
@@ -145,7 +141,7 @@ Bool#extern func matches [ExternFunc:fn] [Type_?:ret_type_] [Str:name] [[Type_]:
     return true;
 }
 
-ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] private: [Bool:is_private] {
+ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] {
     ExternFunc?:maybe_fn = get func named [name];
     if (maybe_fn) {
         ExternFunc:fn = [maybe_fn].unwrap;
@@ -156,7 +152,7 @@ ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] 
             abort "An extern function already exists by the name {}, but does not share the same return type_ or parameters" % name;
         };
     };
-    ExternFunc:extern_func = create new extern fn [ret_type_] [name] [arg_types_] [has_vargs] private: [is_private];
+    ExternFunc:extern_func = create new extern fn [ret_type_] [name] [arg_types_] [has_vargs] specifiers: [specifiers];
     [get state.extern_funcs].append[extern_func];
     get state.last_defined_func = extern_func;
     return extern_func;
@@ -176,7 +172,7 @@ Func_?#defined fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
     return null;
 }
 
-Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] private: [Bool:is_private] {
+Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str:specifiers] {
     [ExternFunc]:extern_funcs = get state.extern_funcs;
     for (W:i enumerating extern_funcs step -1) {
         ExternFunc:extern_func = extern_funcs[i];
@@ -186,10 +182,11 @@ Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] private: [Bool:i
             } else {
                 abort "An extern function already exists with the name {}, but has the incorrect prototype" % name;
             };
+            break;
         };
     };
 
-    ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false] private: [is_private];
+    ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [specifiers];
     IRBasicBlock:entry_bb = IRBasicBlock [0, [IRInstruction] [], false];
     [IRBasicBlock]:basic_blocks = [IRBasicBlock] [entry_bb];
     base.ir_func.body = IRFuncBody [basic_blocks, 1];

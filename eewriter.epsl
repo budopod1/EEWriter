@@ -594,15 +594,24 @@ ExternFunc#get fn [Str:name] {
 }
 
 #private accessibility {
-    get state.next_fn_private = true;
+    add func specifier ["private"];
+}
+
+#add func specifier [Str:specifier] {
+    Str:to_add = " {}" % specifier;
+    if (get state.next_fn_specifiers) {
+        [[get state.next_fn_specifiers].unwrap].extend[to_add];
+    } else {
+        get state.next_fn_specifiers = to_add;
+    };
 }
 
 #extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
-    require extern fn [ret_type_] [name] [arg_types_] [false] private: [is next fn private];
+    require extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [next fn specifiers];
 }
 
 #extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] vargs {
-    require extern fn [ret_type_] [name] [arg_types_] [true] private: [is next fn private];
+    require extern fn [ret_type_] [name] [arg_types_] [true] specifiers: [next fn specifiers];
 }
 
 #call [ExternFunc:func] [[Val]:args] {
@@ -629,23 +638,23 @@ ExternFunc#get fn [Str:name] {
         abort "The number of arguments and the number of argument types_ must match (got {} and {} for {})"
             % [provided_args].len % [arg_types_].len % name;
     };
-    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false] private: [is next fn private];
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [next fn specifiers];
     call [func] [provided_args];
 }
 
 #extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] vargs [[Val]:provided_args] {
-    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true] private: [is next fn private];
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true] specifiers: [next fn specifiers];
     call [func] [provided_args];
 }
 
 Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
-    Bool:is_private = is next fn private;
+    Str:specifiers = next fn specifiers;
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
     if (defined_fn) {
         get state.last_defined_func = [defined_fn].unwrap.base;
         return false;
     } else {
-        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] private: [is_private];
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] specifiers: [specifiers];
         get state.last_defined_func = new_fn.base;
         add fn [new_fn];
         return true;
@@ -657,14 +666,14 @@ Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args]
         abort "The number of arguments and the number of argument types_ must match (got {} and {} for {})"
             % [provided_args].len % [arg_types_].len % name;
     };
-    Bool:is_private = is next fn private;
+    Str:specifiers = next fn specifiers;
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
     if (defined_fn) {
         call [[defined_fn].unwrap.base] [provided_args];
         get state.last_defined_func = [defined_fn].unwrap.base;
         return false;
     } else {
-        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] private: [is_private];
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] specifiers: [specifiers];
         call [new_fn.base] [provided_args];
         get state.last_defined_func = new_fn.base;
         add fn [new_fn];
