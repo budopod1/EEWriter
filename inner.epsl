@@ -111,12 +111,26 @@ Str#next fn specifiers {
     return [specifiers] || [""];
 }
 
-ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] {
-    [IRRegister]:register_args = [IRRegister] [];
-    for (W:i enumerating arg_types_) {
-        [register_args].append[IRRegister [false, "arg{}" % i, [arg_types_[i]].ir]];
+[Str]#get type_ metadatas [Type_:type_] {
+    [Str]:metadatas = [Str] ["noundef"];
+    if ([type_].is_ref) {
+        // the ref counter field is always dereferenceable
+        if ([type_].is_nullable) {
+            [metadatas].append["dereferenceable_or_null(8)"];
+        } else {
+            [metadatas].append["dereferenceable(8)"];
+        };
     };
-    IRFunc:ir = IRFunc [[ret_type_].ir, specifiers, name, register_args, has_vargs, null];
+    return metadatas;
+}
+
+ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] {
+    [IRArgument]:args = [IRArgument] [];
+    for (W:i enumerating arg_types_) {
+        Type_:arg_type_ = arg_types_[i];
+        [args].append[IRArgument [[arg_type_].ir, get type_ metadatas [arg_type_], "arg{}" % i]];
+    };
+    IRFunc:ir = IRFunc [[ret_type_].ir, specifiers, name, args, has_vargs, null];
     return ExternFunc [ir, ret_type_, arg_types_];
 }
 
