@@ -114,11 +114,11 @@ Str#next fn specifiers {
 [Str]#get type_ metadatas [Type_:type_] {
     [Str]:metadatas = [Str] ["noundef"];
     if ([type_].is_ref) {
-        // the ref counter field is always dereferenceable
+        W:min_sizeof = get min comptime sizeof [[type_].pointee];
         if ([type_].is_nullable) {
-            [metadatas].append["dereferenceable_or_null(8)"];
+            [metadatas].append["dereferenceable_or_null({})" % min_sizeof];
         } else {
-            [metadatas].append["dereferenceable(8)"];
+            [metadatas].append["dereferenceable({})" % min_sizeof];
         };
     };
     return metadatas;
@@ -287,6 +287,23 @@ IRType#[Type_:type_].pointee {
 
         abort "Type_ {} does not have a pointee IRType" % [type_].stringify;
     };
+}
+
+W#get min comptime sizeof [IRType:type] {
+    given (type.int as IRIntType:int_t) {
+        return int_t.bits ~/ 8;
+    } given (type.float as IRFloatType:float_t) {
+        return float_t.bits ~/ 8;
+    } given (type.array as IRArrayType:arr_t) {
+        return arr_t.elem_count * get min comptime sizeof [arr_t.elem_type];
+    } given (type.literal_struct as IRStructType:struct_t) {
+        W:total = 0;
+        for (IRType:member in struct_t.members) {
+            total += get min comptime sizeof [member];
+        };
+        return total;
+    };
+    return 0;
 }
 
 IRValue#[Val:val].get {
