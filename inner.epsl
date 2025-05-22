@@ -667,6 +667,9 @@ end fn;
 
 #[Val:val]._ref_free_struct {
     Struct_:struct_ = assert [val] is ref struct_;
+    given (struct_.destructor as Str:destructorSymbol) {
+        extern fn [null] [destructorSymbol] [[Type_] [val.type_]] [[Val] [val]];
+    };
     for (L:i enumerating struct_.fields) {
         [load [[val].[i]]].decr_ref;
     };
