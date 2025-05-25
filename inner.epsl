@@ -671,7 +671,9 @@ end fn;
         extern fn [null] [destructorSymbol] [[Type_] [val.type_]] [[Val] [val]];
     };
     for (L:i enumerating struct_.fields) {
-        [load [[val].[i]]].decr_ref;
+        if ([struct_.fields[i].type_].is_ref) {
+            [load [[val].[i]]].decr_ref;
+        };
     };
     free [val];
 }
