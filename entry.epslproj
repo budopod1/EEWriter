@@ -1,0 +1,5 @@
+{
+    "file": "eewriter",
+    "output-type": "package-both",
+    "packages": ["irgen"]
+}

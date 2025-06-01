@@ -1,4 +1,0 @@
-{
-    "output-type": "package-both",
-    "libraries": ["../EPSL-IR-Gen/irgen"]
-}
