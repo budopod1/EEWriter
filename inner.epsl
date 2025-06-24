@@ -75,6 +75,9 @@ IRModule#build module {
 
 Func_#get active func {
     [Func_]:func_stack = get state.func_stack;
+    if ([func_stack].len == 0) {
+        abort "Code cannot be emitted while not in a function";
+    };
     return [func_stack].at[-1];
 }
 
@@ -96,8 +99,8 @@ ExternFunc?#get func named [Str:name] {
 
 Val#get error stack top {
     State:state = get state;
-    if (state.error_stack_top) {
-        return [state.error_stack_top].unwrap;
+    given (state.error_stack_top as Val:error_stack_top) {
+        return error_stack_top;
     };
     Val:error_stack_top = extern global [Pointer [Pointer [Byte_]]]
         ["epsl_error_stack_top"];
@@ -113,9 +116,11 @@ Str#next fn specifiers {
 
 [Str]#get type_ metadatas [Type_:type_] {
     [Str]:metadatas = [Str] ["noundef"];
-    if ([type_].is_ref) {
+    if ([type_].has_pointee) {
         W:min_sizeof = get min comptime sizeof [[type_].pointee];
-        if ([type_].is_nullable) {
+        if (min_sizeof == 0) {
+
+        } elif ([type_].is_nullable) {
             [metadatas].append["dereferenceable_or_null({})" % min_sizeof];
         } else {
             [metadatas].append["dereferenceable({})" % min_sizeof];
@@ -157,8 +162,7 @@ Bool#extern func matches [ExternFunc:fn] [Type_?:ret_type_] [Str:name] [[Type_]:
 
 ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] {
     ExternFunc?:maybe_fn = get func named [name];
-    if (maybe_fn) {
-        ExternFunc:fn = [maybe_fn].unwrap;
+    given (maybe_fn as ExternFunc:fn) {
         if (extern func matches [fn] [ret_type_] [name] [arg_types_] [has_vargs]) {
             get state.last_defined_func = fn;
             return fn;
@@ -223,8 +227,8 @@ Block#pop from block stack {
 }
 
 IRType#[Type_?:maybe_type_].ir {
-    if (maybe_type_) {
-        return [[maybe_type_].unwrap].ir;
+    given (maybe_type_ as Type_:type_) {
+        return [type_].ir;
     } else {
         return IRType [null, null, null, IRVoidType [], null, null, null];
     };
@@ -236,11 +240,31 @@ IRType#[Type_:type_].ir {
         return int type [(W)type_.bits];
     } elif ([type_.name] equals ["Q"]) {
         return float type [(W)type_.bits];
-    } elif (([type_.name] equals ["Null"]) || ([type_.name] equals ["Optional"])
-        || ([type_.name] equals ["Array"]) || ([type_.name] equals ["Internal"])
-        || ([type_.name] equals ["Pointer"]) || ([type_.name] equals ["FuncPtr"])
-        || ([type_.name] equals ["VoidFuncPtr"])) {
+    } elif ([type_.name] equals ["Null"]) {
+        return int type [1];
+    }elif (([type_.name] equals ["Internal"])
+        || ([type_.name] equals ["Array"]) || ([type_.name] equals ["#Pointer"])
+        || ([type_.name] equals ["#FuncPtr"]) || ([type_.name] equals ["#VoidFuncPtr"])) {
         return ptr type;
+    } elif ([type_].is_poly) {
+        return struct_ type [[IRType] [ptr type, ptr type]];
+    } elif ([type_.name] equals ["Optional"]) {
+        Type_:generic = type_.generics[0];
+        if ([generic].is_ptr) {
+            return ptr type;
+        } elif ([generic].is_poly) {
+            return [generic].ir;
+        } else {
+            abort "{} is an invalid generic for an Optional type_" % [generic].stringify;
+        };
+    } elif ([type_.name] equals ["#VTable"]) {
+        return struct_ type [[IRType] [
+            int type [64], // struct id number
+            int type [64], // the length of the extendee list
+            ptr type, // the extendee list
+            ptr type, // the struct id (as a Str)
+            ptr type // the pointer to the free function
+        ]];
     } else {
         Struct_?:maybe_struct = [type_].get_struct;
 
@@ -262,18 +286,35 @@ IRType#[Type_:type_].ir {
     };
 }
 
+Bool#[Type_:type_].is_ptr {
+    if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"])
+        || ([type_.name] equals ["Z"]) || ([type_.name] equals ["Q"]) || ([type_.name] equals ["Null"])
+        || [type_].is_poly) {
+        return false;
+    } elif ([type_.name] equals ["Optional"]) {
+        return [type_.generics[0]].is_ptr;
+    } else {
+        return true;
+    };
+}
+
+Bool#[Type_:type_].has_pointee {
+    return [type_].is_ptr && !(
+        ([type_.name] equals ["Internal"]) || ([type_.name] equals ["#FuncPtr"])
+        || ([type_.name] equals ["#VoidFuncPtr"]));
+}
+
 IRType#[Type_:type_].pointee {
     if ([type_.name] equals ["Array"]) {
         return struct_ type [[IRType] [int type [64], int type [64], int type [64], ptr type]];
-    } elif ([type_.name] equals ["Pointer"]) {
+    } elif ([type_.name] equals ["#Pointer"]) {
         return [type_.generics[0]].ir;
     } elif ([type_.name] equals ["Optional"]) {
         return [type_.generics[0]].pointee;
     } else {
         Struct_?:maybe_struct = [type_].get_struct;
 
-        if (maybe_struct) {
-            Struct_:struct_ = [maybe_struct].unwrap;
+        given (maybe_struct as Struct_:struct_) {
             if (!struct_.is_ref) {
                 abort "Only ref structs have a pointee type, {} is not a ref struct" % struct_.id;
             };
@@ -307,12 +348,12 @@ W#get min comptime sizeof [IRType:type] {
 }
 
 IRValue#[Val:val].get {
-    if (val.basic) {
-        return [val.basic].unwrap.val;
-    } elif (val.assignable) {
-        return emit [load [[val.assignable].unwrap.addr] to [[val.type_].ir]];
-    } elif (val.const) {
-        return [val.const].unwrap.val;
+    given (val.basic as BasicVal:basic_val) {
+        return basic_val.val;
+    } given (val.assignable as AssignableVal:assignable_val) {
+        return emit [load [assignable_val.addr] to [[val.type_].ir]];
+    } given (val.const as ConstVal:const_val) {
+        return const_val.val;
     } else {
         abort "Invalid Val";
     };
@@ -376,7 +417,7 @@ IRRegister#register of func [IRFunc:func] {
 }
 
 IRValue#[IRFunc:func].make_ptr {
-    return make_val [register of func [func]];
+    return make const [register of func [func]];
 }
 
 Val#basic val [Type_:type_] [IRValue:val] {
@@ -389,6 +430,30 @@ Val#assignable val [Type_:type_] [IRValue:addr] {
 
 Val#const val [Type_:type_] [IRValue:val] {
     return Val [type_, null, null, ConstVal [val]];
+}
+
+IRValue#make nonref struct_ [[IRValue]:elems] {
+    [IRType]:member_types_ = [IRType] [];
+    for (IRValue:elem in elems) {
+        [member_types_].append[[elem].type];
+    };
+    IRValue:struct_ = make const [struct_ type [member_types_]] poison;
+    for (L:i enumerating elems) {
+        struct_ = emit [insert value [elems[i]] [struct_] [[W] [i]]];
+    };
+    return struct_;
+}
+
+IRValue#make const nonref struct_ [[IRValue]:elements] {
+    [IRConstant]:const_elements = [IRConstant] [];
+    [IRType]:elem_types = [IRType] [];
+    for (IRValue:element in elements) {
+        IRConstant:const_elem = [element.constant]
+            .expect["All elements must be constants"];
+        [const_elements].append[const_elem];
+        [elem_types].append[const_elem.type];
+    };
+    return make const [struct_ type [elem_types]] [const_elements];
 }
 
 #call [Type_?:ret_type_] [IRRegister:register] [[Type_]:arg_types_] [[Val]:args] {
@@ -407,8 +472,7 @@ Val#const val [Type_:type_] [IRValue:val] {
 
     W:varg_count = [args].len - [arg_types_].len;
 
-    if (ret_type_) {
-        Type_:known_ret_type_ = [ret_type_].unwrap;
+    given (ret_type_ as Type_:known_ret_type_) {
         IRValue:result = emit [call [[known_ret_type_].ir] [register] [arg_vals] [varg_count]];
         get active func.last_ret_val = basic val [known_ret_type_] [result];
     } else {
@@ -417,14 +481,46 @@ Val#const val [Type_:type_] [IRValue:val] {
 }
 
 IRValue#bitwise not [Type_:type_] [IRValue:val] {
-    return emit [[val] XOR [make const [-1] [(W)type_.bits]] to [[type_].ir]];
+    return emit [[val] XOR [make const [(L)-1] [(W)type_.bits]] to [[type_].ir]];
+}
+
+IRValue#[Type_:type_] [IRValue:val] == null_ {
+    if ([type_.name] equals ["Internal"]) {
+        return emit [compare int [val] ["eq"] [make const null_ ptr]];
+    };
+    assert [type_] is optional;
+    Type_:generic = type_.generics[0];
+    if ([generic].is_ptr) {
+        return [Internal_] [cast [val] from [type_] to [Internal_]] == null_;
+    } elif ([generic].is_poly) {
+        Val:struct_val = [basic val [generic] [val]].struct_;
+        return [Internal_] [[cast [struct_val] to [Internal_]].get] == null_;
+    } else {
+        abort;
+    };
+}
+
+IRValue#[Type_:type_] [IRValue:val] != null_ {
+    if ([type_.name] equals ["Internal"]) {
+        return emit [compare int [val] ["ne"] [make const null_ ptr]];
+    };
+    assert [type_] is optional;
+    Type_:generic = type_.generics[0];
+    if ([generic].is_ptr) {
+        return [Internal_] [cast [val] from [type_] to [Internal_]] != null_;
+    } elif ([generic].is_poly) {
+        Val:struct_val = [basic val [generic] [val]].struct_;
+        return [Internal_] [[cast [struct_val] to [Internal_]].get] != null_;
+    } else {
+        abort;
+    };
 }
 
 IRValue#compute truth value [Type_:type_] [IRValue:val] {
     if ([type_].is_int && type_.bits == 1) {
         return val;
     } elif ([type_.name] equals ["Optional"]) {
-        return emit [compare int [val] ["ne"] [make const null_]];
+        return [type_] [val] != null_;
     } elif ([type_.name] equals ["Array"]) {
         IRValue:length = [[basic val [type_] [val]].length].get;
         return emit [compare int [length] ["ne"] [make const [0] [64]]];
@@ -447,7 +543,7 @@ IRValue#compute untruth value [Type_:type_] [IRValue:val] {
     if ([type_].is_int && type_.bits == 1) {
         return bitwise not [type_] [val];
     } elif ([type_.name] equals ["Optional"]) {
-        return emit [compare int [val] ["eq"] [make const null_]];
+        return [type_] [val] == null_;
     } elif ([type_.name] equals ["Array"]) {
         IRValue:length = [[basic val [type_] [val]].length].get;
         return emit [compare int [length] ["eq"] [make const [0] [64]]];
@@ -464,6 +560,12 @@ IRValue#compute untruth value [Type_:type_] [IRValue:val] {
     };
 
     abort "Don't know how to compute the untruth value of type_ {}" % [type_].stringify;
+}
+
+IRValue#new poly [Type_:type_] [IRValue:val] {
+    return make nonref struct_ [[IRValue] [
+        val, [&[vtable for_ [type_]]].get
+    ]];
 }
 
 IRValue#convert integer [IRValue:val] bits from [Type_:from] to [Type_:to] {
@@ -490,15 +592,109 @@ IRValue#convert float [IRValue:val] bits from [Type_:from] to [Type_:to] {
     };
 }
 
+IRValue#wrap [IRValue:val] to optional type_ [Type_:to] {
+    return val;
+}
+
+IRValue#unwrap optional [IRValue:val] of type_ [Type_:to] {
+    return val;
+}
+
+IRValue#cast poly [IRValue:val] of type_ [Type_:from] to struct_ type_ {
+    return [[basic val [from] [val]].struct_].get;
+}
+
+IRValue#cast poly [IRValue:val] of type_ [Type_:from] to optional type_ [Type_:to] {
+    Type_:generic = to.generics[0];
+    if ([generic].is_poly) {
+        Struct_:from_struct_ = assert [from.generics[0]] is struct_;
+        Struct_:to_struct_ = assert [generic.generics[0]] is struct_;
+        
+        Bool:is_nocast = from_struct_.id == to_struct_.id;
+        Bool:is_upcast = [from_struct_] extends [to_struct_];
+        if (is_nocast || is_upcast) {
+            return val;
+        };
+
+        // it must logically be a downcast
+        Val:typed_val = basic val [from] [val];
+        extern fn [Bool_] ["epsl_check_vtable_extends"] [[Type_] [Internal_, L_]]
+            [[Val] [cast [[typed_val].vtable] to [Internal_], c L_ [to_struct_.id_num]]];
+        Val:does_extend = func ret;
+
+        PHINode:result_phi = new PHI [to];
+        [result_phi].add_incoming[c null_ [to]];
+        if_ [does_extend];
+            [result_phi].add_incoming[bitcast [typed_val] to [to]];
+        end block;
+
+        return [[result_phi].place_here].get;
+    } else {
+        Struct_:struct_ = assert [generic] is struct_;
+
+        PHINode:result_phi = new PHI [to];
+        [result_phi].add_incoming[c null_ [to]];
+
+        Val:typed_val = basic val [from] [val];
+        Val:struct_id = [[typed_val].vtable].vtable_item[0];
+        if_ [[struct_id] eq [c L_ [struct_.id_num]]];
+            [result_phi].add_incoming[bitcast [[typed_val].struct_] to [to]];
+        end block;
+
+        return [[result_phi].place_here].get;
+    };
+}
+
+IRValue#cast [IRValue:val] of type_ [Type_:from] to poly type_ {
+    if ([from].is_poly) {
+        return val;
+    } else {
+        return new poly [from] [val];
+    };
+}
+
+IRValue#cast optional [IRValue:val] from [Type_:from] to [Type_:to] {
+    PHINode:result_phi = new PHI [to];
+    // if the value is null, don't change it
+    Val:typed_val = basic val [to] [val];
+    [result_phi].add_incoming[typed_val];
+    if_ [[typed_val] != null_];
+        [result_phi].add_incoming[basic val [to] [
+            cast [val]
+            from [unwrap nullability [from]]
+            to [to]
+        ]];
+    end block;
+    return [[result_phi].place_here].get;
+}
+
+IRValue#cast [IRValue:val] from [Type_:from] to optional [Type_:to] {
+    return wrap [cast [val] from [from] to [unwrap nullability [to]]]
+        to optional type_ [to];
+}
+
 IRValue#cast [IRValue:val] from [Type_:from] to [Type_:to] {
     if ([from] == [to]) {
         return val;
-    } elif (([from.name] equals ["Optional"]) && ([from.generics[0]] == [to])) {
-        return val;
-    } elif (([to.name] equals ["Optional"]) && ([to.generics[0]] == [from])) {
-        return val;
+    } elif ([from.name] equals ["Null"]) {
+        return [c null_ [to]].get;
     } elif ([to.name] equals ["Bool"]) {
         return compute truth value [from] [val];
+
+    } elif ([from.name] equals ["#Pointer"]) {
+        return val;
+    } elif ([to.name] equals ["#Pointer"]) {
+        return val;
+    } elif ([from.name] equals ["Internal"]) {
+        return val;
+    } elif ([to.name] equals ["Internal"]) {
+        return val;
+    } elif (([from].is_callable) && ([to].is_callable)) {
+        return val;
+
+    } elif (([from.name] equals ["Optional"]) && ([from.generics[0]] == [to])) {
+        return unwrap optional [val] of type_ [from];
+    
     } elif ([from].is_int && [to].is_int) {
         return convert integer [val] bits from [from] to [to];
     } elif ([from].is_float && [to].is_float) {
@@ -511,18 +707,18 @@ IRValue#cast [IRValue:val] from [Type_:from] to [Type_:to] {
         return emit [unsigned [val] to float [[to].ir]];
     } elif ([from].is_signed_int && [to].is_float) {
         return emit [signed [val] to float [[to].ir]];
-    } elif ([from.name] equals ["Null"]) {
-        return val;
-    } elif ([from.name] equals ["Internal"]) {
-        return val;
-    } elif ([to.name] equals ["Internal"]) {
-        return val;
-    } elif ([from].is_callable && [to].is_callable) {
-        return val;
-    } elif ([from.name] equals ["Pointer"]) {
-        return val;
-    } elif ([to.name] equals ["Pointer"]) {
-        return val;
+
+    } elif ([from].is_poly && ([from.generics[0]] == [to])) {
+        return cast poly [val] of type_ [from] to struct_ type_;
+    } elif ([from].is_poly && ([to.name] equals ["Optional"])) {
+        return cast poly [val] of type_ [from] to optional type_ [to];
+    } elif ([to].is_poly) {
+        return cast [val] of type_ [from] to poly type_;
+
+    } elif (([from.name] equals ["Optional"]) && ([to.name] equals ["Optional"])) {
+        return cast optional [val] from [from] to [to];
+    } elif ([to.name] equals ["Optional"]) {
+        return cast [val] from [from] to optional [to];
     };
 
     abort "There is no known way to cast values of type_ {} to {}" % [from].stringify % [to].stringify;
@@ -532,6 +728,8 @@ Val#do_Val_cmp[Val:a][Str:cmpop][Val:b] {
     assert type_ equality [a], [b];
     if ([a.type_].is_float) {
         return basic val [Bool_] [emit [compare float [[a].get] [["o"]+[cmpop]] [[b].get]]];
+    } elif ([a.type_].is_poly) {
+        return do_Val_cmp[[a].struct_][cmpop][[b].struct_];
     } else {
         if ([cmpop] equals ["eq"]) {
         } elif ([cmpop] equals ["ne"]) {
@@ -558,11 +756,22 @@ Val#access field [W:nth] of [Val:val] as [Type_:type_] {
     ]];
 }
 
+Val#extract field [W:nth] of [Val:agg] as [Type_:type_] {
+    return basic val [type_] [emit [
+        extract value [[agg].get] [[W] [nth]] [[type_].ir]
+    ]];
+}
+
+Val#insert [Val:elem] into field [W:nth] of [Val:agg] {
+    return basic val [agg.type_] [emit [
+        insert value [[elem].get] [[agg].get] [[W] [nth]]
+    ]];
+}
+
 IRConstant#get_const_from_val[Val:val] {
-    if (val.const) {
-        IRValue:ir_val = [val.const].unwrap.val;
-        if (ir_val.constant) {
-            return [ir_val.constant].unwrap;
+    given (val.const as ConstVal:const_val) {
+        given (const_val.val.constant as IRConstant:constant) {
+            return constant;
         };
     };
     abort "Expected constant";
@@ -578,6 +787,11 @@ IRValue#make_global type: [IRType:ir_type] name: [Str?:provided_name] basic_init
         provided_name = frmt_str % get filename % [get state.globals].len;
     };
     Str:name = [provided_name].unwrap;
+    for (IRGlobal:global_ in get state.globals) {
+        if ([global_.register.name] equals [name]) {
+            return make const [global_.register];
+        };
+    };
     IRRegister:register = IRRegister [true, name, ptr type];
     Str?:linkage = null;
     if (is_extern) {
@@ -592,7 +806,7 @@ IRValue#make_global type: [IRType:ir_type] name: [Str?:provided_name] basic_init
     [get state.globals].append[IRGlobal [
         register, linkage, named_addr, is_const, ir_type, basic_init, str_init
     ]];
-    return make const [ptr type] [register];
+    return make const [register];
 }
 
 L#index of field [Str:name] in [Struct_:struct_] {
@@ -607,31 +821,24 @@ L#index of field [Str:name] in [Struct_:struct_] {
 #[Val:val]._nonnull_check_ref[Val:rc] {
     assert [val] is nonnullable;
     assert [val] is ref;
-    Type_:type_ = val.type_;
-if (specialized fn [null] ["check_ref"] [[Val] [val, rc]]) {
-    Val:val_here = func arg [0];
-    Val:rc_here = func arg [1];
-    if_ [[rc_here] eq [c L_ [0]]];
+    if_ [[rc] eq [c L_ [0]]];
+        Type_:type_ = val.type_;
         if ([type_.name] equals ["Array"]) {
-            [val_here]._ref_free_array;
+            [val]._ref_free_array;
+        } elif ([type_].is_poly) {
+            [val]._ref_free_poly;
         } else {
-            Struct_?:maybe_struct = [type_].get_struct;
-
-            if (maybe_struct) {
-                [val_here]._ref_free_struct;
-            } else {
-                abort "Don't know how to ref free val of type_ {}" % [type_].stringify;
-            };
+            [val]._ref_free_struct[[[type_].get_struct]
+                .expect["Don't know how to ref free val of type_ {}" % [type_].stringify]];
         };
     end block;
-    ret void;
-end fn;
-};
 }
 
-#[Val:val]._ref_free_array {
-    assert [val] is array;
+#[Val:outer_val]._ref_free_array {
+    assert [outer_val] is array;
 
+if (specialized fn [null] ["free"] [[Val] [outer_val]]) {
+    Val:val = func arg [0];
     Type_:sub = val.type_.generics[0];
 
     Val:content = load [[val].content];
@@ -663,17 +870,32 @@ end fn;
 
     free [content];
     free [val];
+
+    ret void;
+end fn;
+};
 }
 
-#[Val:val]._ref_free_struct {
-    Struct_:struct_ = assert [val] is ref struct_;
-    given (struct_.destructor as Str:destructorSymbol) {
-        extern fn [null] [destructorSymbol] [[Type_] [val.type_]] [[Val] [val]];
+#[Val:val]._ref_free_poly {
+    assert [val] is poly;
+
+    Val:free_fn = [[val].vtable].vtable_item[4];
+    free_fn = bitcast [free_fn] to [VoidFuncPtr [[Type_] [val.type_]]];
+    call [free_fn] [[Val] [val]];
+}
+
+#[Val:val]._ref_free_struct[Struct_:struct_] {
+    if (!struct_.has_global_free_fn) {
+        generate free fn for_ [struct_] private: [true];
     };
-    for (L:i enumerating struct_.fields) {
-        if ([struct_.fields[i].type_].is_ref) {
-            [load [[val].[i]]].decr_ref;
-        };
-    };
-    free [val];
+    Str:free_symbol = get free fn symbol for_ [struct_];
+    extern fn [null] [free_symbol] [[Type_] [val.type_]] [[Val] [val]];
+}
+
+Str#get free fn symbol for_ [Struct_:struct_] {
+    return "free_{}" % struct_.id_num;
+}
+
+Str#get vtable symbol for_ [Struct_:struct_] {
+    return "vtable_{}" % struct_.id_num;
 }
