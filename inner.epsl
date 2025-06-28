@@ -255,7 +255,10 @@ IRType#[Type_:type_].ir {
         } elif ([generic].is_poly) {
             return [generic].ir;
         } else {
-            abort "{} is an invalid generic for an Optional type_" % [generic].stringify;
+            return struct_ type [[IRType] [
+                int type [1],
+                [generic].ir
+            ]];
         };
     } elif ([type_.name] equals ["#VTable"]) {
         return struct_ type [[IRType] [
@@ -496,7 +499,7 @@ IRValue#[Type_:type_] [IRValue:val] == null_ {
         Val:struct_val = [basic val [generic] [val]].struct_;
         return [Internal_] [[cast [struct_val] to [Internal_]].get] == null_;
     } else {
-        abort;
+        return extract field [0] of [val] as [int type [1]];
     };
 }
 
@@ -512,7 +515,8 @@ IRValue#[Type_:type_] [IRValue:val] != null_ {
         Val:struct_val = [basic val [generic] [val]].struct_;
         return [Internal_] [[cast [struct_val] to [Internal_]].get] != null_;
     } else {
-        abort;
+        IRValue:is_null = extract field [0] of [val] as [int type [1]];
+        return bitwise not [Bool_] [is_null];
     };
 }
 
@@ -593,11 +597,23 @@ IRValue#convert float [IRValue:val] bits from [Type_:from] to [Type_:to] {
 }
 
 IRValue#wrap [IRValue:val] to optional type_ [Type_:to] {
-    return val;
+    Type_:generic = to.generics[0];
+    if (([generic].is_ptr) || ([generic].is_poly)) {
+        return val;
+    } else {
+        return make nonref struct_ [[IRValue] [
+            make const [false], val
+        ]];
+    };
 }
 
-IRValue#unwrap optional [IRValue:val] of type_ [Type_:to] {
-    return val;
+IRValue#unwrap optional [IRValue:val] of type_ [Type_:from] {
+    Type_:generic = from.generics[0];
+    if (([generic].is_ptr) || ([generic].is_poly)) {
+        return val;
+    } else {
+        return extract field [1] of [val] as [[generic].ir];
+    };
 }
 
 IRValue#cast poly [IRValue:val] of type_ [Type_:from] to struct_ type_ {
@@ -756,23 +772,36 @@ Val#access field [W:nth] of [Val:val] as [Type_:type_] {
     ]];
 }
 
+IRValue#extract field [W:nth] of [IRValue:agg] as [IRType:type] {
+    return emit [extract value [agg] [[W] [nth]] [type]];
+}
+
 Val#extract field [W:nth] of [Val:agg] as [Type_:type_] {
-    return basic val [type_] [emit [
-        extract value [[agg].get] [[W] [nth]] [[type_].ir]
-    ]];
+    return basic val [type_] [
+        extract field [nth] of [[agg].get] as [[type_].ir]
+    ];
+}
+
+IRValue#insert [IRValue:elem] into field [W:nth] of [IRValue:agg] {
+    return emit [insert value [elem] [agg] [[W] [nth]]];
 }
 
 Val#insert [Val:elem] into field [W:nth] of [Val:agg] {
-    return basic val [agg.type_] [emit [
-        insert value [[elem].get] [[agg].get] [[W] [nth]]
-    ]];
+    return basic val [agg.type_] [
+        insert [[elem].get] into field [nth] of [[agg].get]
+    ];
+}
+
+IRConstant#get_const_from_val[IRValue:val] {
+    given (val.constant as IRConstant:constant) {
+        return constant;
+    };
+    abort "Expected constant";
 }
 
 IRConstant#get_const_from_val[Val:val] {
     given (val.const as ConstVal:const_val) {
-        given (const_val.val.constant as IRConstant:constant) {
-            return constant;
-        };
+        return get_const_from_val[const_val.val];
     };
     abort "Expected constant";
 }
