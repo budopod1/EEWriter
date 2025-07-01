@@ -250,7 +250,7 @@ IRType#[Type_:type_].ir {
         return struct_ type [[IRType] [ptr type, ptr type]];
     } elif ([type_.name] equals ["Optional"]) {
         Type_:generic = type_.generics[0];
-        if ([generic].is_ptr) {
+        if ([generic].is_nonnull_ptr) {
             return ptr type;
         } elif ([generic].is_poly) {
             return [generic].ir;
@@ -299,6 +299,10 @@ Bool#[Type_:type_].is_ptr {
     } else {
         return true;
     };
+}
+
+Bool#[Type_:type_].is_nonnull_ptr {
+    return [type_].is_ptr && ![type_].is_nullable;
 }
 
 Bool#[Type_:type_].has_pointee {
@@ -493,7 +497,7 @@ IRValue#[Type_:type_] [IRValue:val] == null_ {
     };
     assert [type_] is optional;
     Type_:generic = type_.generics[0];
-    if ([generic].is_ptr) {
+    if ([generic].is_nonnull_ptr) {
         return [Internal_] [cast [val] from [type_] to [Internal_]] == null_;
     } elif ([generic].is_poly) {
         Val:struct_val = [basic val [generic] [val]].struct_;
@@ -509,7 +513,7 @@ IRValue#[Type_:type_] [IRValue:val] != null_ {
     };
     assert [type_] is optional;
     Type_:generic = type_.generics[0];
-    if ([generic].is_ptr) {
+    if ([generic].is_nonnull_ptr) {
         return [Internal_] [cast [val] from [type_] to [Internal_]] != null_;
     } elif ([generic].is_poly) {
         Val:struct_val = [basic val [generic] [val]].struct_;
@@ -598,7 +602,7 @@ IRValue#convert float [IRValue:val] bits from [Type_:from] to [Type_:to] {
 
 IRValue#wrap [IRValue:val] to optional type_ [Type_:to] {
     Type_:generic = to.generics[0];
-    if (([generic].is_ptr) || ([generic].is_poly)) {
+    if (([generic].is_nonnull_ptr) || ([generic].is_poly)) {
         return val;
     } else {
         return make nonref struct_ [[IRValue] [
@@ -609,7 +613,7 @@ IRValue#wrap [IRValue:val] to optional type_ [Type_:to] {
 
 IRValue#unwrap optional [IRValue:val] of type_ [Type_:from] {
     Type_:generic = from.generics[0];
-    if (([generic].is_ptr) || ([generic].is_poly)) {
+    if (([generic].is_nonnull_ptr) || ([generic].is_poly)) {
         return val;
     } else {
         return extract field [1] of [val] as [[generic].ir];
@@ -731,6 +735,8 @@ IRValue#cast [IRValue:val] from [Type_:from] to [Type_:to] {
     } elif ([to].is_poly) {
         return cast [val] of type_ [from] to poly type_;
 
+    } elif (([to.name] equals ["Optional"]) && ([from] == [to.generics[0]])) {
+        return wrap [val] to optional type_ [to];
     } elif (([from.name] equals ["Optional"]) && ([to.name] equals ["Optional"])) {
         return cast optional [val] from [from] to [to];
     } elif ([to.name] equals ["Optional"]) {
@@ -762,6 +768,21 @@ Val#do_Val_cmp[Val:a][Str:cmpop][Val:b] {
     if (!current bb.is_terminated) {
         abort "The current basic block must be terminated by this point";
     };
+}
+
+Val#deep [Val:val] == null_ invert: [Bool:invert] {
+    PHINode:result_phi = new PHI [Bool_];
+    Label:end_label = new label;
+    while ([val.type_.name] equals ["Optional"]) {
+        Label:next_label = new label;
+        [result_phi].add_incoming[c [!invert]];
+        goto_ [[val] == null_] ? [end_label] : [next_label];
+    [next_label]:;
+        val = unwrap nullability [val];
+    };
+    [result_phi].add_incoming[c [invert]];
+[end_label]:;
+    return [result_phi].place_here;
 }
 
 Val#access field [W:nth] of [Val:val] as [Type_:type_] {
