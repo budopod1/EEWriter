@@ -690,19 +690,29 @@ ExternFunc#get fn [Str:name] {
 
 #add func specifier [Str:specifier] {
     Str:to_add = " {}" % specifier;
-    if (get state.next_fn_specifiers) {
-        [[get state.next_fn_specifiers].unwrap].extend[to_add];
+    given (get state.next_fn_specifiers as Str:next_fn_specifiers) {
+        [next_fn_specifiers].extend[to_add];
     } else {
         get state.next_fn_specifiers = to_add;
     };
 }
 
+#add func attr [Str:attr] {
+    [Str]:fn_attrs = [Str] [];
+    given (get state.next_fn_attrs as [Str]:next_fn_attrs) {
+        fn_attrs = next_fn_attrs;
+    } else {
+        get state.next_fn_attrs = fn_attrs;
+    };
+    [fn_attrs].append[attr];
+}
+
 #extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
-    require extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [next fn specifiers];
+    require extern fn [ret_type_] [name] [arg_types_] [false];
 }
 
 #extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] vargs {
-    require extern fn [ret_type_] [name] [arg_types_] [true] specifiers: [next fn specifiers];
+    require extern fn [ret_type_] [name] [arg_types_] [true];
 }
 
 #call [ExternFunc:func] [[Val]:args] {
@@ -729,23 +739,24 @@ ExternFunc#get fn [Str:name] {
         abort "The number of arguments and the number of argument types_ must match (got {} and {} for {})"
             % [provided_args].len % [arg_types_].len % name;
     };
-    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [next fn specifiers];
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false];
     call [func] [provided_args];
 }
 
 #extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] vargs [[Val]:provided_args] {
-    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true] specifiers: [next fn specifiers];
+    ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true];
     call [func] [provided_args];
 }
 
 Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
     Str:specifiers = next fn specifiers;
+    [Str]:fn_attrs = next fn attrs;
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
     if (defined_fn) {
         get state.last_defined_func = [defined_fn].unwrap.base;
         return false;
     } else {
-        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] specifiers: [specifiers];
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] specifiers: [specifiers] fn_attrs: [fn_attrs];
         get state.last_defined_func = new_fn.base;
         add fn [new_fn];
         return true;
@@ -758,13 +769,14 @@ Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args]
             % [provided_args].len % [arg_types_].len % name;
     };
     Str:specifiers = next fn specifiers;
+    [Str]:fn_attrs = next fn attrs;
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
     if (defined_fn) {
         call [[defined_fn].unwrap.base] [provided_args];
         get state.last_defined_func = [defined_fn].unwrap.base;
         return false;
     } else {
-        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] specifiers: [specifiers];
+        Func_:new_fn = new fn [ret_type_] [name] [arg_types_] specifiers: [specifiers] fn_attrs: [fn_attrs];
         call [new_fn.base] [provided_args];
         get state.last_defined_func = new_fn.base;
         add fn [new_fn];

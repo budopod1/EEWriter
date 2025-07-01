@@ -8,6 +8,7 @@ State {
     [ExternFunc]:extern_funcs,
     [Func_]:func_stack,
     Str?:next_fn_specifiers,
+    [Str]?:next_fn_attrs,
     ExternFunc?:last_defined_func,
     [Struct_]:structs,
     [IRGlobal]:globals,
@@ -34,7 +35,7 @@ State#get state {
 
 #init state [Str:filename] {
     state = State [
-        filename, [Func_] [], [ExternFunc] [], [Func_] [], null, null,
+        filename, [Func_] [], [ExternFunc] [], [Func_] [], null, null, null,
         [Struct_] [], [IRGlobal] [], null
     ];
 }
@@ -114,28 +115,34 @@ Str#next fn specifiers {
     return [specifiers] || [""];
 }
 
-[Str]#get type_ metadatas [Type_:type_] {
-    [Str]:metadatas = [Str] ["noundef"];
+[Str]#next fn attrs {
+    [Str]?:attrs = get state.next_fn_attrs;
+    get state.next_fn_attrs = null;
+    return [attrs] || [[Str] []];
+}
+
+[Str]#get type_ attrs [Type_:type_] {
+    [Str]:attrs = [Str] ["noundef"];
     if ([type_].has_pointee) {
         W:min_sizeof = get min comptime sizeof [[type_].pointee];
         if (min_sizeof == 0) {
 
         } elif ([type_].is_nullable) {
-            [metadatas].append["dereferenceable_or_null({})" % min_sizeof];
+            [attrs].append["dereferenceable_or_null({})" % min_sizeof];
         } else {
-            [metadatas].append["dereferenceable({})" % min_sizeof];
+            [attrs].append["dereferenceable({})" % min_sizeof];
         };
     };
-    return metadatas;
+    return attrs;
 }
 
-ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] {
+ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] fn_attrs: [[Str]:fn_attrs] {
     [IRArgument]:args = [IRArgument] [];
     for (W:i enumerating arg_types_) {
         Type_:arg_type_ = arg_types_[i];
-        [args].append[IRArgument [[arg_type_].ir, get type_ metadatas [arg_type_], "arg{}" % i]];
+        [args].append[IRArgument [[arg_type_].ir, get type_ attrs [arg_type_], "arg{}" % i]];
     };
-    IRFunc:ir = IRFunc [[ret_type_].ir, specifiers, name, args, has_vargs, null];
+    IRFunc:ir = IRFunc [[ret_type_].ir, specifiers, name, args, has_vargs, fn_attrs, null];
     return ExternFunc [ir, ret_type_, arg_types_];
 }
 
@@ -160,7 +167,9 @@ Bool#extern func matches [ExternFunc:fn] [Type_?:ret_type_] [Str:name] [[Type_]:
     return true;
 }
 
-ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] {
+ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] {
+    Str:specifiers = next fn specifiers;
+    [Str]:fn_attrs = next fn attrs;
     ExternFunc?:maybe_fn = get func named [name];
     given (maybe_fn as ExternFunc:fn) {
         if (extern func matches [fn] [ret_type_] [name] [arg_types_] [has_vargs]) {
@@ -170,7 +179,7 @@ ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] 
             abort "An extern function already exists by the name {}, but does not share the same return type_ or parameters" % name;
         };
     };
-    ExternFunc:extern_func = create new extern fn [ret_type_] [name] [arg_types_] [has_vargs] specifiers: [specifiers];
+    ExternFunc:extern_func = create new extern fn [ret_type_] [name] [arg_types_] [has_vargs] specifiers: [specifiers] fn_attrs: [fn_attrs];
     [get state.extern_funcs].append[extern_func];
     get state.last_defined_func = extern_func;
     return extern_func;
@@ -190,7 +199,7 @@ Func_?#defined fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
     return null;
 }
 
-Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str:specifiers] {
+Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str:specifiers] fn_attrs: [[Str]:fn_attrs] {
     [ExternFunc]:extern_funcs = get state.extern_funcs;
     for (W:i enumerating extern_funcs step -1) {
         ExternFunc:extern_func = extern_funcs[i];
@@ -204,7 +213,7 @@ Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str
         };
     };
 
-    ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [specifiers];
+    ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [specifiers] fn_attrs: [fn_attrs];
     IRBasicBlock:entry_bb = IRBasicBlock [0, [IRInstruction] [], false];
     [IRBasicBlock]:basic_blocks = [IRBasicBlock] [entry_bb];
     base.ir_func.body = IRFuncBody [basic_blocks, 1];
