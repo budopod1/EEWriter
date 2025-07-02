@@ -277,7 +277,7 @@ Val#c [Z:val] [Type_:type_] {
     if ([type_].is_float) {
         return c [(Q)val] [type_];
     } else {
-        return const val [type_][make const [(W)val] [(W)type_.bits]];
+        return const val [type_][make const [(L)val] [(W)type_.bits]];
     };
 }
 
