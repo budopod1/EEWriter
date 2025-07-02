@@ -214,7 +214,7 @@ Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str
     };
 
     ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [specifiers] fn_attrs: [fn_attrs];
-    IRBasicBlock:entry_bb = IRBasicBlock [0, [IRInstruction] [], false];
+    IRBasicBlock:entry_bb = IRBasicBlock [0, [:IRInstruction] [], false];
     [IRBasicBlock]:basic_blocks = [IRBasicBlock] [entry_bb];
     base.ir_func.body = IRFuncBody [basic_blocks, 1];
     return Func_ [base, [Block] [], entry_bb, null];
@@ -380,7 +380,7 @@ IRBasicBlock#current bb {
 }
 
 IRBasicBlock#new bb {
-    IRBasicBlock:bb = IRBasicBlock [next id, [IRInstruction] [], false];
+    IRBasicBlock:bb = IRBasicBlock [next id, [:IRInstruction] [], false];
     [[get active func.base.ir_func.body].unwrap.blocks].append[bb];
     return bb;
 }
@@ -405,24 +405,25 @@ IRValue#make_val [IRRegister:reg] {
     return IRValue [reg, null];
 }
 
-IRValue#make_val [IRValuedInstruction:valued] {
+IRValue#make_val [:IRValuedInstruction:valued] {
     return make_val [valued.register];
 }
 
-IRValue#emit [IRValuedInstruction:valued] {
-    [current bb.instructions].append[make instruction [valued]];
+IRValue#emit [:IRValuedInstruction:valued] {
+    [current bb.instructions].append[valued];
     return make_val [valued];
 }
 
-#emit [IRInstruction:instruction] {
+#emit [:IRInstruction:instruction] {
     [current bb.instructions].append[instruction];
-    if (instruction.ret_void || instruction.ret || instruction.conditional_branch
-        || instruction.unconditional_branch || instruction.switch_ || instruction.unreachable) {
+    if ((IRRetVoidInstruction?)instruction || (IRRetInstruction?)instruction
+        || (IRConditionalBranchInstruction?)instruction || (IRUnconditionalBranchInstruction?)instruction
+        || (IRSwitchInstruction?)instruction || (IRUnreachableInstruction?)instruction) {
         current bb.is_terminated = true;
     };
 }
 
-#emit [IRInstruction:instruction] unless terminated {
+#emit [:IRInstruction:instruction] unless terminated {
     if (!current bb.is_terminated) {
         emit [instruction];
     };
@@ -647,6 +648,10 @@ IRValue#cast poly [IRValue:val] of type_ [Type_:from] to optional type_ [Type_:t
 
         // it must logically be a downcast
         Val:typed_val = basic val [from] [val];
+        add func attr ["nofree"];
+        add func attr ["norecurse"];
+        add func attr ["nosync"];
+        add func attr ["memory(read, inaccessiblemem: none)"];
         extern fn [Bool_] ["epsl_check_vtable_extends"] [[Type_] [Internal_, L_]]
             [[Val] [cast [[typed_val].vtable] to [Internal_], c L_ [to_struct_.id_num]]];
         Val:does_extend = func ret;

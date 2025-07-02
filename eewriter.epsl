@@ -24,8 +24,7 @@ ConstVal {
 
 PHINode {
     Type_:type_,
-    IRPHIInstruction:ir,
-    IRRegister:register
+    IRPHIInstruction:ir
 }
 
 Struct_ {
@@ -964,7 +963,7 @@ Block#create block with entry [Label:entry], otherwise [Label:otherwise], ending
 }
 
 PHINode#new PHI [Type_:type_] {
-    return PHINode [type_, IRPHIInstruction [[IRValue] [], [W] []], new register [[type_].ir]];
+    return PHINode [type_, IRPHIInstruction [new register [[type_].ir], [IRValue] [], [W] []]];
 }
 
 #[PHINode:phi].add_incoming[Val:val] {
@@ -982,12 +981,12 @@ PHINode#new PHI [Type_:type_] {
 }
 
 Val#[PHINode:phi].place_here {
-    emit [wrap PHI [phi.register] [phi.ir]];
+    emit [phi.ir];
     return [phi].val;
 }
 
 Val#[PHINode:phi].val {
-    return basic val [phi.type_] [make_val [phi.register]];
+    return basic val [phi.type_] [make_val [phi.ir]];
 }
 
 // always evaluates both operands
@@ -1001,7 +1000,7 @@ Val#[Val:cond] ? [Val:if_true] : [Val:if_false] {
 
 Val#[Val:ptr] shifted by [Val:offset] {
     IRType:pointee = [ptr.type_].pointee;
-    IRValuedInstruction:GEP = GEP [pointee] [[ptr].get] [[IRValue] [[offset].get]];
+    :IRValuedInstruction:GEP = GEP [pointee] [[ptr].get] [[IRValue] [[offset].get]];
     return basic val [ptr.type_] [emit [GEP]];
 }
 

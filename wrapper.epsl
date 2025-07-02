@@ -1,208 +1,200 @@
 #import irgen;
 #import inner;
 
-IRValuedInstruction#fneg [IRValue:val] {
-    return IRValuedInstruction [new register [[val].type], IRFloatNegationInstruction [val], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#fneg [IRValue:val] {
+    return IRFloatNegationInstruction [new register [[val].type], val];
 }
 
-IRValuedInstruction#[IRValue:a] add [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, IRAdditionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] add [IRValue:b] to [IRType:type] {
+    return IRAdditionInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] fadd [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, IRFloatAdditionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] fadd [IRValue:b] to [IRType:type] {
+    return IRFloatAdditionInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] sub [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, IRSubtractionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] sub [IRValue:b] to [IRType:type] {
+    return IRSubtractionInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] fsub [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, IRFloatSubtractionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] fsub [IRValue:b] to [IRType:type] {
+    return IRFloatSubtractionInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] mul [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, IRMultiplicationInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] mul [IRValue:b] to [IRType:type] {
+    return IRMultiplicationInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] fmul [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, IRFloatMultiplicationInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] fmul [IRValue:b] to [IRType:type] {
+    return IRFloatMultiplicationInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] udiv [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, IRUnsignedDivisionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] udiv [IRValue:b] to [IRType:type] {
+    return IRUnsignedDivisionInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] sdiv [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, IRSignedDivisionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] sdiv [IRValue:b] to [IRType:type] {
+    return IRSignedDivisionInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] fdiv [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, IRFloatDivisionInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] fdiv [IRValue:b] to [IRType:type] {
+    return IRFloatDivisionInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] urem [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, IRUnsignedModuloInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] urem [IRValue:b] to [IRType:type] {
+    return IRUnsignedModuloInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] srem [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, IRSignedModuloInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] srem [IRValue:b] to [IRType:type] {
+    return IRSignedModuloInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] frem [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, IRFloatModuloInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] frem [IRValue:b] to [IRType:type] {
+    return IRFloatModuloInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] left shift [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, IRLeftShiftInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] left shift [IRValue:b] to [IRType:type] {
+    return IRLeftShiftInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] unsigned right shift [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRUnsignedRightShiftInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] unsigned right shift [IRValue:b] to [IRType:type] {
+    return IRUnsignedRightShiftInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] signed right shift [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRSignedRightShiftInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] signed right shift [IRValue:b] to [IRType:type] {
+    return IRSignedRightShiftInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] AND [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRANDInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] AND [IRValue:b] to [IRType:type] {
+    return IRANDInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] OR [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRORInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] OR [IRValue:b] to [IRType:type] {
+    return IRORInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#[IRValue:a] XOR [IRValue:b] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRXORInstruction [a, b], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#[IRValue:a] XOR [IRValue:b] to [IRType:type] {
+    return IRXORInstruction [new register [type], a, b];
 }
 
-IRValuedInstruction#extract value [IRValue:aggregate] [[W]:indices] [IRType:field_type] {
-    return IRValuedInstruction [new register [field_type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRExtractValueInstruction [aggregate, indices], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#extract value [IRValue:aggregate] [[W]:indices] [IRType:field_type] {
+    return IRExtractValueInstruction [new register [field_type], aggregate, indices];
 }
 
-IRValuedInstruction#insert value [IRValue:val] [IRValue:aggregate] [[W]:indices] {
-    return IRValuedInstruction [new register [[aggregate].type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRInsertValueInstruction [aggregate, val, indices], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#insert value [IRValue:val] [IRValue:aggregate] [[W]:indices] {
+    return IRInsertValueInstruction [new register [[aggregate].type], aggregate, val, indices];
 }
 
-IRValuedInstruction#alloca [IRType:type] {
-    return IRValuedInstruction [new register [ptr type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRAllocaInstruction [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#alloca [IRType:type] {
+    return IRAllocaInstruction [new register [ptr type], type];
 }
 
-IRValuedInstruction#alloca [IRValue:count] [IRType:type] {
-    return IRValuedInstruction [new register [ptr type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRAllocaMultipleInstruction [type, count], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#alloca [IRValue:count] [IRType:type] {
+    return IRAllocaMultipleInstruction [new register [ptr type], type, count];
 }
 
-IRValuedInstruction#load [IRValue:ptr] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRLoadInstruction [ptr], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#load [IRValue:ptr] to [IRType:type] {
+    return IRLoadInstruction [new register [type], ptr];
 }
 
-IRValuedInstruction#GEP [IRType:base_type] [IRValue:ptr] [[IRValue]:indices] {
-    return IRValuedInstruction [new register [ptr type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRGEPInstruction [base_type, ptr, indices], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#GEP [IRType:base_type] [IRValue:ptr] [[IRValue]:indices] {
+    return IRGEPInstruction [new register [ptr type], base_type, ptr, indices];
 }
 
-IRValuedInstruction#truncate [IRValue:val] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRTruncateInstruction [val], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#truncate [IRValue:val] to [IRType:type] {
+    return IRTruncateInstruction [new register [type], val];
 }
 
-IRValuedInstruction#zero extend [IRValue:val] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRUnsignedExtendInstruction [val], null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#zero extend [IRValue:val] to [IRType:type] {
+    return IRUnsignedExtendInstruction [new register [type], val];
 }
 
-IRValuedInstruction#sign extend [IRValue:val] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRSignedExtendInstruction [val], null, null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#sign extend [IRValue:val] to [IRType:type] {
+    return IRSignedExtendInstruction [new register [type], val];
 }
 
-IRValuedInstruction#float truncate [IRValue:val] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRFloatTruncateInstruction [val], null, null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#float truncate [IRValue:val] to [IRType:type] {
+    return IRFloatTruncateInstruction [new register [type], val];
 }
 
-IRValuedInstruction#float extend [IRValue:val] to [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRFloatExtendInstruction [val], null, null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#float extend [IRValue:val] to [IRType:type] {
+    return IRFloatExtendInstruction [new register [type], val];
 }
 
-IRValuedInstruction#float [IRValue:val] to unsigned [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRFloatToUnsignedInstruction [val], null, null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#float [IRValue:val] to unsigned [IRType:type] {
+    return IRFloatToUnsignedInstruction [new register [type], val];
 }
 
-IRValuedInstruction#float [IRValue:val] to signed [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRFloatToSignedInstruction [val], null, null, null, null, null, null, null, null, null];
+:IRValuedInstruction#float [IRValue:val] to signed [IRType:type] {
+    return IRFloatToSignedInstruction [new register [type], val];
 }
 
-IRValuedInstruction#unsigned [IRValue:val] to float [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRUnsignedToFloatInstruction [val], null, null, null, null, null, null, null, null];
+:IRValuedInstruction#unsigned [IRValue:val] to float [IRType:type] {
+    return IRUnsignedToFloatInstruction [new register [type], val];
 }
 
-IRValuedInstruction#signed [IRValue:val] to float [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRSignedToFloatInstruction [val], null, null, null, null, null, null, null];
+:IRValuedInstruction#signed [IRValue:val] to float [IRType:type] {
+    return IRSignedToFloatInstruction [new register [type], val];
 }
 
-IRValuedInstruction#ptr [IRValue:ptr] to int [IRType:type] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRPtrToIntInstruction [ptr], null, null, null, null, null, null];
+:IRValuedInstruction#ptr [IRValue:ptr] to int [IRType:type] {
+    return IRPtrToIntInstruction [new register [type], ptr];
 }
 
-IRValuedInstruction#int [IRValue:int] to ptr {
-    return IRValuedInstruction [new register [ptr type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRIntToPtrInstruction [int], null, null, null, null, null];
+:IRValuedInstruction#int [IRValue:int] to ptr {
+    return IRIntToPtrInstruction [new register [ptr type], int];
 }
 
-IRValuedInstruction#compare int [IRValue:a] [Str:cmpop] [IRValue:b] {
-    return IRValuedInstruction [new register [int type [1]], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRIntCompareInstruction [cmpop, a, b], null, null, null, null];
+:IRValuedInstruction#compare int [IRValue:a] [Str:cmpop] [IRValue:b] {
+    return IRIntCompareInstruction [new register [int type [1]], cmpop, a, b];
 }
 
-IRValuedInstruction#compare float [IRValue:a] [Str:cmpop] [IRValue:b] {
-    return IRValuedInstruction [new register [int type [1]], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRFloatCompareInstruction [cmpop, a, b], null, null, null];
+:IRValuedInstruction#compare float [IRValue:a] [Str:cmpop] [IRValue:b] {
+    return IRFloatCompareInstruction [new register [int type [1]], cmpop, a, b];
 }
 
-IRValuedInstruction#wrap PHI [IRRegister:register] [IRPHIInstruction:phi] {
-    return IRValuedInstruction [register, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, phi, null, null];
+:IRValuedInstruction#select [IRType:type] [IRValue:if_true] if_ [IRValue:cond] else_ [IRValue:if_false] {
+    return IRSelectInstruction [new register [type], cond, if_true, if_false];
 }
 
-IRValuedInstruction#select [IRType:type] [IRValue:if_true] if_ [IRValue:cond] else_ [IRValue:if_false] {
-    return IRValuedInstruction [new register [type], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRSelectInstruction [cond, if_true, if_false], null];
+:IRValuedInstruction#call [IRType:ret_type_] [IRRegister:register] [[IRValue]:args] [W:varg_count] {
+    return IRCallInstruction [new register [ret_type_], IRBaseCallInstruction [register, args, varg_count]];
 }
 
-IRValuedInstruction#call [IRType:ret_type_] [IRRegister:register] [[IRValue]:args] [W:varg_count] {
-    return IRValuedInstruction [new register [ret_type_], null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, IRCallInstruction [register, args, varg_count]];
+:IRInstruction#ret void instruction {
+    return IRRetVoidInstruction [];
 }
 
-IRInstruction#make instruction [IRValuedInstruction:valued] {
-    return IRInstruction [valued, null, null, null, null, null, null, null, null];
+:IRInstruction#ret [IRValue:returned] {
+    return IRRetInstruction [returned];
 }
 
-IRInstruction#ret void instruction {
-    return IRInstruction [null, IRRetVoidInstruction [], null, null, null, null, null, null, null];
+:IRInstruction#branch to [IRBasicBlock:if_true] if_ [IRValue:cond] else_ [IRBasicBlock:if_false] {
+    return IRConditionalBranchInstruction [cond, if_true.id, if_false.id];
 }
 
-IRInstruction#ret [IRValue:returned] {
-    return IRInstruction [null, null, IRRetInstruction [returned], null, null, null, null, null, null];
+:IRInstruction#branch to [IRBasicBlock:block] {
+    return IRUnconditionalBranchInstruction [block.id];
 }
 
-IRInstruction#branch to [IRBasicBlock:if_true] if_ [IRValue:cond] else_ [IRBasicBlock:if_false] {
-    return IRInstruction [null, null, null, IRConditionalBranchInstruction [cond, if_true.id, if_false.id], null, null, null, null, null];
-}
-
-IRInstruction#branch to [IRBasicBlock:block] {
-    return IRInstruction [null, null, null, null, IRUnconditionalBranchInstruction [block.id], null, null, null, null];
-}
-
-IRInstruction#switch_ on [IRValue:switch_on] to [[IRConstant]:targets] [[IRBasicBlock]:branches] otherwise [IRBasicBlock:default_branch] {
+:IRInstruction#switch_ on [IRValue:switch_on] to [[IRConstant]:targets] [[IRBasicBlock]:branches] otherwise [IRBasicBlock:default_branch] {
     [W]:branch_ids = [W]*[branches].len;
     for (W:i enumerating branches) {
         branch_ids[i] = branches[i].id;
     };
-    return IRInstruction [null, null, null, null, null, IRSwitchInstruction [switch_on, default_branch.id, targets, branch_ids], null, null, null];
+    return IRSwitchInstruction [switch_on, default_branch.id, targets, branch_ids];
 }
 
-IRInstruction#unreachable instruction {
-    return IRInstruction [null, null, null, null, null, null, IRUnreachableInstruction [], null, null];
+:IRInstruction#unreachable instruction {
+    return IRUnreachableInstruction [];
 }
 
-IRInstruction#store [IRValue:val] in [IRValue:ptr] {
-    return IRInstruction [null, null, null, null, null, null, null, IRStoreInstruction [val, ptr], null];
+:IRInstruction#store [IRValue:val] in [IRValue:ptr] {
+    return IRStoreInstruction [val, ptr];
 }
 
-IRInstruction#call void [IRRegister:register] [[IRValue]:args] [W:varg_count] {
-    return IRInstruction [null, null, null, null, null, null, null, null, IRCallInstruction [register, args, varg_count]];
+:IRInstruction#call void [IRRegister:register] [[IRValue]:args] [W:varg_count] {
+    return IRCallVoidInstruction [IRBaseCallInstruction [register, args, varg_count]];
 }
 
 IRType#ptr type {
