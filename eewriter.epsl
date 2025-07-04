@@ -696,14 +696,14 @@ ExternFunc#get fn [Str:name] {
     };
 }
 
-#add func attr [Str:attr] {
+#add func attrs [[Str]:attrs] {
     [Str]:fn_attrs = [Str] [];
     given (get state.next_fn_attrs as [Str]:next_fn_attrs) {
         fn_attrs = next_fn_attrs;
     } else {
         get state.next_fn_attrs = fn_attrs;
     };
-    [fn_attrs].append[attr];
+    [fn_attrs].extend[attrs];
 }
 
 #extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
@@ -1020,6 +1020,7 @@ Val#sizeof elem [Type_:type_] {
 }
 
 Val#malloc [Val:bytes] {
+    add func attrs [[Str] ["mustprogress", "nofree", "allockind(\"alloc,uninitialized\")", "allocsize(0)"]];
     extern fn [Internal_] ["epsl_malloc"] [[Type_] [L_]]
         [[Val] [cast [bytes] to [L_]]];
     return func ret;
@@ -1042,6 +1043,7 @@ Val#malloc pointee [Val:count] [Type_:type_] {
 }
 
 Val#realloc [Val:val] to [Val:bytes] bytes {
+    add func attrs [[Str] ["mustprogress", "allockind(\"realloc\")", "allocsize(1)"]];
     extern fn [Internal_] ["epsl_realloc"] [[Type_] [Internal_, L_]]
         [[Val] [val, cast [bytes] to [L_]]];
     return func ret;
@@ -1058,16 +1060,36 @@ Val#realloc [Val:val] to [Val:count] elements {
 }
 
 #memcpy [Val:count] [Val:v1] to [Val:v2] {
-    extern fn [Internal_] ["epsl_memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
-        cast [v2] to [Internal_], cast [v1] to [Internal_],
-        [sizeof pointee [v1.type_]] * [cast [count] to [L_]]
-    ]];
+    extern fn [null] ["llvm.memcpy.p0.p0.i64"] 
+        [[Type_] [Internal_, Internal_, L_, Bool_]] 
+        [[Val] [
+            cast [v2] to [Internal_], cast [v1] to [Internal_],
+            [sizeof pointee [v1.type_]] * [cast [count] to [L_]],
+            c [false] // not volatile
+        ]];
 }
 
 #memcpy [Val:v1] to [Val:v2] {
-    extern fn [Internal_] ["epsl_memcpy"] [[Type_] [Internal_, Internal_, L_]] [[Val] [
-        cast [v2] to [Internal_], cast [v1] to [Internal_], sizeof pointee [v1.type_]
-    ]];
+    memcpy [c L_ [1]] [v1] to [v2];
+}
+
+#memmove [Val:count] [Val:v1] to [Val:v2] {
+    extern fn [null] ["llvm.memmove.p0.p0.i64"] 
+        [[Type_] [Internal_, Internal_, L_, Bool_]] 
+        [[Val] [
+            cast [v2] to [Internal_], cast [v1] to [Internal_],
+            [sizeof pointee [v1.type_]] * [cast [count] to [L_]],
+            c [false] // not volatile
+        ]];
+}
+
+#memset [Val:count] bytes of [Val:buffer] to [Val:ch] {
+    extern fn [null] ["llvm.memset.p0.i64"]
+        [[Type_] [Internal_, Byte_, L_, Bool_]]
+        [[Val] [
+            cast [buffer] to [Internal_], cast [ch] to [Byte_],
+            cast [count] to [L_], c [false] // not volatile
+        ]];
 }
 
 #assume [Val:val] {
