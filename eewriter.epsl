@@ -1355,7 +1355,9 @@ Val#new array [Type_:type_] [[Val]:vals] with capacity [L:capacity] {
 
     Val:content = malloc [c L_ [capacity]] [type_.generics[0]];
     for (L:i enumerating vals) {
-        [[content].idx[c L_ [i]]] = [vals[i]];
+        Val:val = load [vals[i]];
+        [val].incr_ref;
+        [[content].idx[c L_ [i]]] = [val];
     };
     [[result].content] = [content];
 
