@@ -897,9 +897,22 @@ L#index of field [Str:name] in [Struct_:struct_] {
     abort "Field {} not found in struct {}" % name % struct_.id;
 }
 
+Bool#[Val:val].is_global_ptr_const {
+    if (![val.assignable].is_null) {
+        return false;
+    };
+    given ([val].get.constant as IRConstant:constant) {
+        return ![constant.global_ptr].is_null;
+    };
+    return false;
+}
+
 #[Val:val]._nonnull_check_ref[Val:rc] {
     assert [val] is nonnullable;
     assert [val] is ref;
+    if ([val].is_global_ptr_const) {
+        return;
+    };
     if_ [[rc] eq [c L_ [0]]];
         Type_:type_ = val.type_;
         if ([type_.name] equals ["Array"]) {
