@@ -471,8 +471,9 @@ Val#deep unwrap nullability [Val:val] {
     };
 }
 
-#assert type_ equality [Val:a], [Val:b] {
+Type_#assert type_ equality [Val:a], [Val:b] {
     assert type_ equality [a.type_], [b.type_];
+    return a.type_;
 }
 
 #assert type_ equality [Type_:a], [Type_:b] {
@@ -502,76 +503,106 @@ Val#NOT [Val:val] {
 }
 
 Val#[Val:a] AND [Val:b] {
-    assert type_ equality [a], [b];
-    return basic val [a.type_] [emit [[[a].get] AND [[b].get] to [[a.type_].ir]]];
+    Type_:type_ = assert type_ equality [a], [b];
+    return basic val [type_] [emit [IRANDInstruction [
+        new register [type_], [Str] [], [a].get, [b].get
+    ]]];
 }
 
 Val#[Val:a] OR [Val:b] {
-    assert type_ equality [a], [b];
-    return basic val [a.type_] [emit [[[a].get] OR [[b].get] to [[a.type_].ir]]];
+    Type_:type_ = assert type_ equality [a], [b];
+    return basic val [type_] [emit [IRORInstruction [
+        new register [type_], [Str] [], [a].get, [b].get
+    ]]];
 }
 
 Val#[Val:a] XOR [Val:b] {
-    assert type_ equality [a], [b];
-    return basic val [a.type_] [emit [[[a].get] XOR [[b].get] to [[a.type_].ir]]];
+    Type_:type_ = assert type_ equality [a], [b];
+    return basic val [type_] [emit [IRXORInstruction [
+        new register [type_], [Str] [], [a].get, [b].get
+    ]]];
 }
 
-Val#[Val:a] + [Val:b] {
-    assert type_ equality [a], [b];
-    if ([a.type_].is_int) {
-        return basic val [a.type_] [emit [[[a].get] add [[b].get] to [[a.type_].ir]]];
+Val#[Val:a] + [Val:b] bound: [Bool:bound] {
+    Type_:type_ = assert type_ equality [a], [b];
+    if ([type_].is_int) {
+        return basic val [type_] [emit [IRAdditionInstruction [
+            new register [type_], get instr flags [type_] bound: [bound], [a].get, [b].get
+        ]]];
     } else {
-        return basic val [a.type_] [emit [[[a].get] fadd [[b].get] to [[a.type_].ir]]];
+        return basic val [type_] [emit [IRFloatAdditionInstruction [
+            new register [type_], get instr flags [type_] bound: [bound], [a].get, [b].get
+        ]]];
     };
 }
 
-Val#[Val:a] - [Val:b] {
-    assert type_ equality [a], [b];
-    if ([a.type_].is_int) {
-        return basic val [a.type_] [emit [[[a].get] sub [[b].get] to [[a.type_].ir]]];
+Val#[Val:a] - [Val:b] bound: [Bool:bound] {
+    Type_:type_ = assert type_ equality [a], [b];
+    if ([type_].is_int) {
+        return basic val [type_] [emit [IRSubtractionInstruction [
+            new register [type_], get instr flags [type_] bound: [bound], [a].get, [b].get
+        ]]];
     } else {
-        return basic val [a.type_] [emit [[[a].get] fsub [[b].get] to [[a.type_].ir]]];
+        return basic val [type_] [emit [IRFloatSubtractionInstruction [
+            new register [type_], get instr flags [type_] bound: [bound], [a].get, [b].get
+        ]]];
     };
 }
 
-Val#[Val:a] * [Val:b] {
-    assert type_ equality [a], [b];
-    if ([a.type_].is_int) {
-        return basic val [a.type_] [emit [[[a].get] mul [[b].get] to [[a.type_].ir]]];
+Val#[Val:a] * [Val:b] bound: [Bool:bound] {
+    Type_:type_ = assert type_ equality [a], [b];
+    if ([type_].is_int) {
+        return basic val [type_] [emit [IRMultiplicationInstruction [
+            new register [type_], get instr flags [type_] bound: [bound], [a].get, [b].get
+        ]]];
     } else {
-        return basic val [a.type_] [emit [[[a].get] fmul [[b].get] to [[a.type_].ir]]];
+        return basic val [type_] [emit [IRFloatMultiplicationInstruction [
+            new register [type_], get instr flags [type_] bound: [bound], [a].get, [b].get
+        ]]];
     };
 }
 
 Val#[Val:a] / [Val:b] {
-    assert type_ equality [a], [b];
-    if ([a.type_].is_unsigned_int) {
-        return basic val [a.type_] [emit [[[a].get] udiv [[b].get] to [[a.type_].ir]]];
-    } elif ([a.type_].is_signed_int) {
-        return basic val [a.type_] [emit [[[a].get] sdiv [[b].get] to [[a.type_].ir]]];
+    Type_:type_ = assert type_ equality [a], [b];
+    if ([type_].is_unsigned_int) {
+        return basic val [type_] [emit [IRUnsignedDivisionInstruction [
+            new register [type_], [Str] [], [a].get, [b].get
+        ]]];
+    } elif ([type_].is_signed_int) {
+        return basic val [type_] [emit [IRSignedDivisionInstruction [
+            new register [type_], [Str] [], [a].get, [b].get
+        ]]];
     } else {
-        return basic val [a.type_] [emit [[[a].get] fdiv [[b].get] to [[a.type_].ir]]];
+        return basic val [type_] [emit [IRFloatDivisionInstruction [
+            new register [type_], [Str] [], [a].get, [b].get
+        ]]];
     };
 }
 
 Val#[Val:a] % [Val:b] {
-    assert type_ equality [a], [b];
-    if ([a.type_].is_unsigned_int) {
-        return basic val [a.type_] [emit [[[a].get] urem [[b].get] to [[a.type_].ir]]];
-    } elif ([a.type_].is_signed_int) {
-        return basic val [a.type_] [emit [[[a].get] srem [[b].get] to [[a.type_].ir]]];
+    Type_:type_ = assert type_ equality [a], [b];
+    if ([type_].is_unsigned_int) {
+        return basic val [type_] [emit [IRUnsignedModuloInstruction [
+            new register [type_], [Str] [], [a].get, [b].get
+        ]]];
+    } elif ([type_].is_signed_int) {
+        return basic val [type_] [emit [IRSignedModuloInstruction [
+            new register [type_], [Str] [], [a].get, [b].get
+        ]]];
     } else {
-        return basic val [a.type_] [emit [[[a].get] frem [[b].get] to [[a.type_].ir]]];
+        return basic val [type_] [emit [IRFloatModuloInstruction [
+            new register [type_], [Str] [], [a].get, [b].get
+        ]]];
     };
 }
 
-Val#negate [Val:val] {
-    if ([val.type_].is_int) {
-        return basic val [val.type_] [emit [
-            [make const [0] [(W)val.type_.bits]] sub [[val].get] to [[val.type_].ir]
-        ]];
+Val#negate [Val:v] {
+    if ([v.type_].is_int) {
+        return basic val [v.type_] [emit [IRSubtractionInstruction [
+            new register [v.type_], [Str] [], make const [0] [(W)v.type_.bits], [v].get
+        ]]];
     } else {
-        return basic val [val.type_] [emit [fneg [[val].get]]];
+        return basic val [v.type_] [emit [fneg [[v].get]]];
     };
 }
 
@@ -612,7 +643,9 @@ Val#[Val:a] shift left [Val:b] {
         abort "Both operands in a bitshift must have the same number of bits";
     };
 
-    return basic val [a.type_] [emit [[[a].get] left shift [[b].get] to [[a.type_].ir]]];
+    return basic val [a.type_] [emit [IRLeftShiftInstruction [
+        new register [a.type_], [Str] [], [a].get, [b].get
+    ]]];
 }
 
 Val#[Val:a] shift right [Val:b] {
@@ -624,9 +657,13 @@ Val#[Val:a] shift right [Val:b] {
     };
 
     if ([a.type_].is_signed_int) {
-        return basic val [a.type_] [emit [[[a].get] signed right shift [[b].get] to [[a.type_].ir]]];
+        return basic val [a.type_] [emit [IRSignedRightShiftInstruction [
+            new register [a.type_], [Str] [], [a].get, [b].get
+        ]]];
     } else {
-        return basic val [a.type_] [emit [[[a].get] unsigned right shift [[b].get] to [[a.type_].ir]]];
+        return basic val [a.type_] [emit [IRUnsignedRightShiftInstruction [
+            new register [a.type_], [Str] [], [a].get, [b].get
+        ]]];
     };
 }
 
@@ -1031,7 +1068,8 @@ Val#malloc [Type_:type_] {
 }
 
 Val#malloc [Val:count] [Type_:type_] {
-    return cast [malloc [[sizeof [type_]] * [cast [count] to [L_]]]] to [Pointer [type_]];
+    Val:bytes = [sizeof [type_]] * [cast [count] to [L_]] bound: [false];
+    return cast [malloc [bytes]] to [Pointer [type_]];
 }
 
 Val#malloc pointee [Type_:type_] {
@@ -1039,7 +1077,8 @@ Val#malloc pointee [Type_:type_] {
 }
 
 Val#malloc pointee [Val:count] [Type_:type_] {
-    return cast [malloc [[sizeof pointee [type_]] * [cast [count] to [L_]]]] to [type_];
+    Val:bytes = [sizeof pointee [type_]] * [cast [count] to [L_]] bound: [false];
+    return cast [malloc [bytes]] to [type_];
 }
 
 Val#realloc [Val:val] to [Val:bytes] bytes {
@@ -1051,7 +1090,7 @@ Val#realloc [Val:val] to [Val:bytes] bytes {
 
 Val#realloc [Val:val] to [Val:count] elements {
     assert [val] is pointer;
-    Val:bytes = [sizeof pointee [val.type_]] * [cast [count] to [L_]];
+    Val:bytes = [sizeof pointee [val.type_]] * [cast [count] to [L_]] bound: [false];
     return cast [realloc [cast [val] to [Internal_]] to [bytes] bytes] to [val.type_];
 }
 
@@ -1064,7 +1103,7 @@ Val#realloc [Val:val] to [Val:count] elements {
         [[Type_] [Internal_, Internal_, L_, Bool_]] 
         [[Val] [
             cast [v2] to [Internal_], cast [v1] to [Internal_],
-            [sizeof pointee [v1.type_]] * [cast [count] to [L_]],
+            [sizeof pointee [v1.type_]] * [cast [count] to [L_]] bound: [false],
             c [false] // not volatile
         ]];
 }
@@ -1078,7 +1117,7 @@ Val#realloc [Val:val] to [Val:count] elements {
         [[Type_] [Internal_, Internal_, L_, Bool_]] 
         [[Val] [
             cast [v2] to [Internal_], cast [v1] to [Internal_],
-            [sizeof pointee [v1.type_]] * [cast [count] to [L_]],
+            [sizeof pointee [v1.type_]] * [cast [count] to [L_]] bound: [false],
             c [false] // not volatile
         ]];
 }
@@ -1399,7 +1438,7 @@ Val#[Val:val].ref {
     };
     val = deep unwrap nullability [val];
     Val:rc = [val].ref;
-    [rc] = [[rc] + [c L_ [1]]];
+    [rc] = [[rc] + [c L_ [1]] bound: [true]];
     if (is_nullable) {
         end block;
     };
@@ -1416,7 +1455,7 @@ Val#[Val:val].ref {
     };
     val = deep unwrap nullability [val];
     Val:rc = [val].ref;
-    [rc] = [[rc] - [c L_ [1]]];
+    [rc] = [[rc] - [c L_ [1]] bound: [true]];
     if (is_nullable) {
         end block;
     };
@@ -1433,7 +1472,7 @@ Val#[Val:val].ref {
     };
     val = deep unwrap nullability [val];
     Val:rc = [val].ref;
-    Val:new_rc = [rc] - [c L_ [1]];
+    Val:new_rc = [rc] - [c L_ [1]] bound: [true];
     [rc] = [new_rc];
     [val]._nonnull_check_ref[new_rc];
     if (is_nullable) {

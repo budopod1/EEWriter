@@ -401,6 +401,10 @@ IRRegister#new register [IRType:type] {
     return IRRegister [false, name register [next id], type];
 }
 
+IRRegister#new register [Type_:type] {
+    return IRRegister [false, name register [next id], [type].ir];
+}
+
 IRValue#make_val [IRRegister:reg] {
     return IRValue [reg, null];
 }
@@ -447,6 +451,18 @@ Val#assignable val [Type_:type_] [IRValue:addr] {
 
 Val#const val [Type_:type_] [IRValue:val] {
     return Val [type_, null, null, ConstVal [val]];
+}
+
+[Str]#get instr flags [Type_:type_] bound: [Bool:bound] {
+    if (bound) {
+        if ([type_].is_signed_int) {
+            return [Str] ["nsw"];
+        } elif ([type_].is_unsigned_int) {
+            return [Str] ["nuw"];
+        };
+    };
+    return [Str] [];
+    
 }
 
 IRValue#make nonref struct_ [[IRValue]:elems] {
@@ -498,7 +514,9 @@ IRValue#make const nonref struct_ [[IRValue]:elements] {
 }
 
 IRValue#bitwise not [Type_:type_] [IRValue:val] {
-    return emit [[val] XOR [make const [(L)-1] [(W)type_.bits]] to [[type_].ir]];
+    return emit [IRXORInstruction [
+        new register [type_], [Str] [], val, make const [(L)-1] [(W)type_.bits]
+    ]];
 }
 
 IRValue#[Type_:type_] [IRValue:val] == null_ {
@@ -922,7 +940,7 @@ if (specialized fn [null] ["free"] [[Val] [outer_val]]) {
 
 [loop]:;
     [load [[content].idx[i]]].decr_ref;
-    Val:new_i = [i] + [c L_ [1]];
+    Val:new_i = [i] + [c L_ [1]] bound: [true];
     [i_phi].add_incoming[new_i];
     goto_ [check];
 
