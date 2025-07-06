@@ -121,7 +121,11 @@ Str#next fn specifiers {
     return [attrs] || [[Str] []];
 }
 
-[Str]#get type_ attrs [Type_:type_] {
+[Str]#get type_ attrs [Type_?:maybe_type_] {
+    if ([maybe_type_].is_null) {
+        return [Str] [];
+    };
+    Type_:type_ = [maybe_type_].unwrap;
     [Str]:attrs = [Str] ["noundef"];
     if ([type_].has_pointee) {
         W:min_sizeof = get min comptime sizeof [[type_].pointee];
@@ -142,7 +146,8 @@ ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types
         Type_:arg_type_ = arg_types_[i];
         [args].append[IRArgument [[arg_type_].ir, get type_ attrs [arg_type_], "arg{}" % i]];
     };
-    IRFunc:ir = IRFunc [[ret_type_].ir, specifiers, name, args, has_vargs, fn_attrs, null];
+    IRReturnType:ret = IRReturnType [[ret_type_].ir, get type_ attrs [ret_type_]];
+    IRFunc:ir = IRFunc [ret, specifiers, name, args, has_vargs, fn_attrs, null];
     return ExternFunc [ir, ret_type_, arg_types_];
 }
 
