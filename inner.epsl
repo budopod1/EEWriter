@@ -256,9 +256,10 @@ IRType#[Type_:type_].ir {
         return float type [(W)type_.bits];
     } elif ([type_.name] equals ["Null"]) {
         return int type [1];
-    }elif (([type_.name] equals ["Internal"])
+    } elif (([type_.name] equals ["Internal"])
         || ([type_.name] equals ["Array"]) || ([type_.name] equals ["#Pointer"])
-        || ([type_.name] equals ["#FuncPtr"]) || ([type_.name] equals ["#VoidFuncPtr"])) {
+        || ([type_.name] equals ["#FuncPtr"]) || ([type_.name] equals ["#VoidFuncPtr"])
+        || ([type_.name] equals ["#StructBase"])) {
         return ptr type;
     } elif ([type_].is_poly) {
         return struct_ type [[IRType] [ptr type, ptr type]];
@@ -659,14 +660,20 @@ IRValue#cast poly [IRValue:val] of type_ [Type_:from] to struct_ type_ {
 
 IRValue#cast poly [IRValue:val] of type_ [Type_:from] to optional type_ [Type_:to] {
     Type_:generic = to.generics[0];
-    if ([generic].is_poly) {
-        Struct_:from_struct_ = assert [from.generics[0]] is struct_;
+    if ([generic.name] equals ["Struct"]) {
+        return val;
+    } elif ([generic.name] equals ["Poly"]) {
         Struct_:to_struct_ = assert [generic.generics[0]] is struct_;
-        
-        Bool:is_nocast = from_struct_.id == to_struct_.id;
-        Bool:is_upcast = [from_struct_] extends [to_struct_];
-        if (is_nocast || is_upcast) {
-            return val;
+
+        // if from IS Struct, then this will always be a downcast
+        if ([from.name] not equals ["Struct"]) {
+            Struct_:from_struct_ = assert [from.generics[0]] is struct_;
+            
+            Bool:is_nocast = from_struct_.id == to_struct_.id;
+            Bool:is_upcast = [from_struct_] extends [to_struct_];
+            if (is_nocast || is_upcast) {
+                return val;
+            };
         };
 
         // it must logically be a downcast
@@ -762,7 +769,7 @@ IRValue#cast [IRValue:val] from [Type_:from] to [Type_:to] {
     } elif ([from].is_signed_int && [to].is_float) {
         return emit [signed [val] to float [[to].ir]];
 
-    } elif ([from].is_poly && ([from.generics[0]] == [to])) {
+    } elif (([from.name] equals ["Poly"]) && ([from.generics[0]] == [to])) {
         return cast poly [val] of type_ [from] to struct_ type_;
     } elif ([from].is_poly && ([to.name] equals ["Optional"])) {
         return cast poly [val] of type_ [from] to optional type_ [to];

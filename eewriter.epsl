@@ -153,7 +153,7 @@ Type_#Poly_ [Type_:sub] {
     return Type_ ["Poly", -1, [Type_] [sub]];
 }
 
-// the next four types_ are a small extension to the Epsilon type_ system
+// the next five types_ are a small extension to the Epsilon type_ system
 
 Type_#Pointer [Type_:sub] {
     return Type_ ["#Pointer", -1, [Type_] [sub]];
@@ -167,8 +167,12 @@ Type_#VoidFuncPtr [[Type_]:arg_types_] {
     return Type_ ["#VoidFuncPtr", -1, arg_types_];
 }
 
-Type_#VTable [Type_:struct_type_] {
-    return Type_ ["#VTable", -1, [Type_] [struct_type_]];
+Type_#VTable [Type_:generic] {
+    return Type_ ["#VTable", -1, [Type_] [generic]];
+}
+
+Type_#StructBase {
+    return T_ ["#StructBase"];
 }
 
 #[Struct_:struct_].register {
@@ -314,14 +318,15 @@ Bool#[Type_:type_].is_nullable {
 }
 
 Bool#[Type_:type_].is_poly {
-    return [type_.name] equals ["Poly"];
+    return ([type_.name] equals ["Poly"]) || ([type_.name] equals ["Struct"]);
 }
 
 Bool#[Type_:type_].is_ref {
     if ([type_.name] equals ["Optional"]) {
         return [type_.generics[0]].is_ref;
     };
-    if (([type_.name] equals ["Array"]) || ([type_].is_poly)) {
+    if (([type_.name] equals ["Array"]) || ([type_].is_poly)
+        || ([type_.name] equals ["#StructBase"])) {
         return true;
     };
     Struct_?:struct_ = [type_].get_struct;
@@ -1149,14 +1154,17 @@ Val#expect [Val:val] to be [Bool:truth_value] {
 
 Val#[Val:poly].struct_ {
     assert [poly] is poly;
-    Val:val = extract field [0] of [poly] as [poly.type_.generics[0]];
-    return val;
+    Type_:dest_type_ = StructBase;
+    if ([poly.type_.name] equals ["Poly"]) {
+        dest_type_ = poly.type_.generics[0];
+    };
+    return extract field [0] of [poly] as [dest_type_];
 }
 
 Val#[Val:poly].vtable {
     assert [poly] is poly;
     return extract field [1] of [poly]
-        as [Pointer [VTable [poly.type_.generics[0]]]];
+        as [Pointer [VTable [poly.type_]]];
 }
 
 Val#[Val:vtable].vtable_item[W:i] {
@@ -1540,7 +1548,7 @@ end fn;
     extern fn [null] [free_symbol] [[Type_] [struct_type_]];
     Val:free_fn_ptr = func ptr;
 
-    Type_:vtable_type_ = VTable [struct_type_];
+    Type_:vtable_type_ = VTable [Poly_ [struct_type_]];
     IRValue:vtable_val = make const nonref struct_ [[IRValue] [
         make const [struct_.id_num] [64],
         make const [[extendee_ids].len] [64],
@@ -1555,5 +1563,5 @@ end fn;
 
 Val#vtable for_ [Type_:type_] {
     Struct_:struct_ = assert [type_] is struct_;
-    return extern const [VTable [type_]] [get vtable symbol for_ [struct_]];
+    return extern const [VTable [Poly_ [type_]]] [get vtable symbol for_ [struct_]];
 }
