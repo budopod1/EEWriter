@@ -193,7 +193,7 @@ Struct_?#[Type_:type_].get_struct {
 }
 
 Bool#[Struct_:a] extends [Struct_:b] {
-    return [a.extendee_ids].index_of[b.id_num] >= 0;
+   return ![[a.extendee_ids].index_of[b.id_num]].is_null;
 }
 
 Str#[Type_:type_].stringify {
