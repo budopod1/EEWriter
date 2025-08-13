@@ -717,9 +717,8 @@ IRValue#cast [IRValue:val] of type_ [Type_:from] to poly type_ {
 IRValue#cast optional [IRValue:val] from [Type_:from] to [Type_:to] {
     PHINode:result_phi = new PHI [to];
     // if the value is null, don't change it
-    Val:typed_val = basic val [to] [val];
-    [result_phi].add_incoming[typed_val];
-    if_ [[typed_val] != null_];
+    [result_phi].add_incoming[c null_ [to]];
+    if_ [basic val [Bool_] [[from] [val] != null_]];
         [result_phi].add_incoming[basic val [to] [
             cast [val]
             from [unwrap nullability [from]]
