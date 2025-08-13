@@ -1,5 +1,5 @@
-#import irgen;
-#import inner;
+$import irgen;
+$import inner;
 
 :IRValuedInstruction#fneg [IRValue:val] {
     return IRFloatNegationInstruction [new register [[val].type], val];

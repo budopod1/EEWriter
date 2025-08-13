@@ -1,6 +1,6 @@
-#import irgen;
-#import eewriter;
-#import wrapper;
+$import irgen;
+$import eewriter;
+$import wrapper;
 
 State {
     Str:filename,
@@ -23,7 +23,7 @@ Func_ {
     Val?:last_ret_val,
 }
 
-#global State?:state;
+$global State?:state;
 
 State#get state {
     if (state) {

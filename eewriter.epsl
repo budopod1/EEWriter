@@ -1,6 +1,6 @@
-#import irgen;
-#import inner;
-#import wrapper;
+$import irgen;
+$import inner;
+$import wrapper;
 
 Val {
     Type_:type_,
