@@ -252,7 +252,7 @@ IRType#[Type_:type_].ir {
     if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"])
         || ([type_.name] equals ["Z"])) {
         return int type [(W)type_.bits];
-    } elif ([type_.name] equals ["Q"]) {
+    } elif ([type_.name] equals ["R"]) {
         return float type [(W)type_.bits];
     } elif ([type_.name] equals ["Null"]) {
         return int type [1];
@@ -306,7 +306,7 @@ IRType#[Type_:type_].ir {
 
 Bool#[Type_:type_].is_ptr {
     if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"])
-        || ([type_.name] equals ["Z"]) || ([type_.name] equals ["Q"]) || ([type_.name] equals ["Null"])
+        || ([type_.name] equals ["Z"]) || ([type_.name] equals ["R"]) || ([type_.name] equals ["Null"])
         || [type_].is_poly) {
         return false;
     } elif ([type_.name] equals ["Optional"]) {

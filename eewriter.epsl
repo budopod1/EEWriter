@@ -117,8 +117,8 @@ Type_#Z_ {
     return Type_ ["Z", 32, [Type_] []];
 }
 
-Type_#Q_ {
-    return Type_ ["Q", 64, [Type_] []];
+Type_#R_ {
+    return Type_ ["R", 64, [Type_] []];
 }
 
 Type_#W_ [W:bits] {
@@ -133,8 +133,8 @@ Type_#Z_ [W:bits] {
     return Type_ ["Z", bits, [Type_] []];
 }
 
-Type_#Q_ [W:bits] {
-    return Type_ ["Q", bits, [Type_] []];
+Type_#R_ [W:bits] {
+    return Type_ ["R", bits, [Type_] []];
 }
 
 Type_#Optional_ [Type_:sub] {
@@ -244,8 +244,8 @@ Val#c [Z:val] {
     return const val [Z_][make const [(W)val]];
 }
 
-Val#c [Q:val] {
-    return const val [Q_][make const [val]];
+Val#c [R:val] {
+    return const val [R_][make const [val]];
 }
 
 Val#c null_ [Type_:type_] {
@@ -278,13 +278,13 @@ Val#c null_ {
 
 Val#c [Z:val] [Type_:type_] {
     if ([type_].is_float) {
-        return c [(Q)val] [type_];
+        return c [(R)val] [type_];
     } else {
         return const val [type_][make const [(L)val] [(W)type_.bits]];
     };
 }
 
-Val#c [Q:val] [Type_:type_] {
+Val#c [R:val] [Type_:type_] {
     return const val [type_][make const [val] [(W)type_.bits]];
 }
 
@@ -302,7 +302,7 @@ Bool#[Type_:type_].is_int {
 }
 
 Bool#[Type_:type_].is_float {
-    return [type_.name] equals ["Q"];
+    return [type_.name] equals ["R"];
 }
 
 Bool#[Type_:type_].is_numeric {

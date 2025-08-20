@@ -161,11 +161,11 @@ IRValue#make const [L:val] [W:bits] {
     return IRValue [null, IRConstant [int type [bits], IRIntConstant [val], null, null, null, null, null, null]];
 }
 
-IRValue#make const [Q:val] {
+IRValue#make const [R:val] {
     return IRValue [null, IRConstant [float type [64], null, IRFloatConstant [val], null, null, null, null, null]];
 }
 
-IRValue#make const [Q:val] [W:bits] {
+IRValue#make const [R:val] [W:bits] {
     return IRValue [null, IRConstant [float type [bits], null, IRFloatConstant [val], null, null, null, null, null]];
 }
 
