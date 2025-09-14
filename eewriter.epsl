@@ -1180,6 +1180,21 @@ Val#[Val:vtable].vtable_item[W:i] {
     return load [*[access field [i] of [vtable] as [type_]]];
 }
 
+Val#does [Val:poly] extend [Struct_:struct] {
+    Val:vtable = [poly].vtable;
+    L:expected_index = [struct.extendee_ids].len - 1;
+    Val:extendee_count = [vtable].vtable_item[1];
+    PHINode:result_phi = new PHI [Bool_];
+    [result_phi].add_incoming [c [false]];
+    if_ [[c L_ [expected_index]] lt [extendee_count]];
+        Val:extendee_list = [vtable].vtable_item[2];
+        Val:idx_val = *[[extendee_list] shifted by [c L_ [expected_index]]];
+        Val:struct_id_val = c L_ [struct.id_num];
+        [result_phi].add_incoming[[idx_val] eq [struct_id_val]];
+    end block;
+    return [result_phi].place_here;
+}
+
 Val#[Val:arr].capacity {
     assert [arr] is array;
     return *[access field [1] of [arr] as [L_]];
@@ -1533,7 +1548,7 @@ end fn;
 
     [L]:extendee_ids = struct_.extendee_ids;
     [IRConstant]:extendee_id_consts = [IRConstant] [];
-    for (L:extendee_id in extendee_ids) {
+    for (L:extendee_id in extendee_ids step -1) {
         [extendee_id_consts].append[get_const_from_val[c L_ [extendee_id]]];
     };
     IRType:extendees_ir_type = array type [[extendee_ids].len]x[int type [64]];

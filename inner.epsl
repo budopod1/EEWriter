@@ -678,10 +678,7 @@ IRValue#cast poly [IRValue:val] of type_ [Type_:from] to optional type_ [Type_:t
 
         // it must logically be a downcast
         Val:typed_val = basic val [from] [val];
-        add func attrs [[Str] ["nofree", "norecurse", "nosync", "memory(read, inaccessiblemem: none)"]];
-        extern fn [Bool_] ["epsl_check_vtable_extends"] [[Type_] [Internal_, L_]]
-            [[Val] [cast [[typed_val].vtable] to [Internal_], c L_ [to_struct_.id_num]]];
-        Val:does_extend = func ret;
+        Val:does_extend = does [typed_val] extend [to_struct_];
 
         PHINode:result_phi = new PHI [to];
         [result_phi].add_incoming[c null_ [to]];
