@@ -1,6 +1,6 @@
-$import irgen;
-$import inner;
-$import wrapper;
+%import irgen;
+%import inner;
+%import wrapper;
 
 Val {
     Type_:type_,
@@ -1042,7 +1042,7 @@ Val#[Val:cond] ? [Val:if_true] : [Val:if_false] {
 
 Val#[Val:ptr] shifted by [Val:offset] {
     IRType:pointee = [ptr.type_].pointee;
-    %IRValuedInstruction:GEP = GEP [pointee] [[ptr].get] [[IRValue] [[offset].get]];
+    $IRValuedInstruction:GEP = GEP [pointee] [[ptr].get] [[IRValue] [[offset].get]];
     return basic val [ptr.type_] [emit [GEP]];
 }
 
