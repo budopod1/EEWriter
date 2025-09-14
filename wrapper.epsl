@@ -1,111 +1,111 @@
 $import irgen;
 $import inner;
 
-:IRValuedInstruction#fneg [IRValue:val] {
+%IRValuedInstruction#fneg [IRValue:val] {
     return IRFloatNegationInstruction [new register [[val].type], val];
 }
 
-:IRValuedInstruction#extract value [IRValue:aggregate] [[W]:indices] [IRType:field_type] {
+%IRValuedInstruction#extract value [IRValue:aggregate] [[W]:indices] [IRType:field_type] {
     return IRExtractValueInstruction [new register [field_type], aggregate, indices];
 }
 
-:IRValuedInstruction#insert value [IRValue:val] [IRValue:aggregate] [[W]:indices] {
+%IRValuedInstruction#insert value [IRValue:val] [IRValue:aggregate] [[W]:indices] {
     return IRInsertValueInstruction [new register [[aggregate].type], aggregate, val, indices];
 }
 
-:IRValuedInstruction#alloca [IRType:type] {
+%IRValuedInstruction#alloca [IRType:type] {
     return IRAllocaInstruction [new register [ptr type], type];
 }
 
-:IRValuedInstruction#alloca [IRValue:count] [IRType:type] {
+%IRValuedInstruction#alloca [IRValue:count] [IRType:type] {
     return IRAllocaMultipleInstruction [new register [ptr type], type, count];
 }
 
-:IRValuedInstruction#load [IRValue:ptr] to [IRType:type] {
+%IRValuedInstruction#load [IRValue:ptr] to [IRType:type] {
     return IRLoadInstruction [new register [type], ptr];
 }
 
-:IRValuedInstruction#GEP [IRType:base_type] [IRValue:ptr] [[IRValue]:indices] {
+%IRValuedInstruction#GEP [IRType:base_type] [IRValue:ptr] [[IRValue]:indices] {
     return IRGEPInstruction [new register [ptr type], base_type, ptr, indices];
 }
 
-:IRValuedInstruction#truncate [IRValue:val] to [IRType:type] {
+%IRValuedInstruction#truncate [IRValue:val] to [IRType:type] {
     return IRTruncateInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#zero extend [IRValue:val] to [IRType:type] {
+%IRValuedInstruction#zero extend [IRValue:val] to [IRType:type] {
     return IRUnsignedExtendInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#sign extend [IRValue:val] to [IRType:type] {
+%IRValuedInstruction#sign extend [IRValue:val] to [IRType:type] {
     return IRSignedExtendInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#float truncate [IRValue:val] to [IRType:type] {
+%IRValuedInstruction#float truncate [IRValue:val] to [IRType:type] {
     return IRFloatTruncateInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#float extend [IRValue:val] to [IRType:type] {
+%IRValuedInstruction#float extend [IRValue:val] to [IRType:type] {
     return IRFloatExtendInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#float [IRValue:val] to unsigned [IRType:type] {
+%IRValuedInstruction#float [IRValue:val] to unsigned [IRType:type] {
     return IRFloatToUnsignedInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#float [IRValue:val] to signed [IRType:type] {
+%IRValuedInstruction#float [IRValue:val] to signed [IRType:type] {
     return IRFloatToSignedInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#unsigned [IRValue:val] to float [IRType:type] {
+%IRValuedInstruction#unsigned [IRValue:val] to float [IRType:type] {
     return IRUnsignedToFloatInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#signed [IRValue:val] to float [IRType:type] {
+%IRValuedInstruction#signed [IRValue:val] to float [IRType:type] {
     return IRSignedToFloatInstruction [new register [type], val];
 }
 
-:IRValuedInstruction#ptr [IRValue:ptr] to int [IRType:type] {
+%IRValuedInstruction#ptr [IRValue:ptr] to int [IRType:type] {
     return IRPtrToIntInstruction [new register [type], ptr];
 }
 
-:IRValuedInstruction#int [IRValue:int] to ptr {
+%IRValuedInstruction#int [IRValue:int] to ptr {
     return IRIntToPtrInstruction [new register [ptr type], int];
 }
 
-:IRValuedInstruction#compare int [IRValue:a] [Str:cmpop] [IRValue:b] {
+%IRValuedInstruction#compare int [IRValue:a] [Str:cmpop] [IRValue:b] {
     return IRIntCompareInstruction [new register [int type [1]], cmpop, a, b];
 }
 
-:IRValuedInstruction#compare float [IRValue:a] [Str:cmpop] [IRValue:b] {
+%IRValuedInstruction#compare float [IRValue:a] [Str:cmpop] [IRValue:b] {
     return IRFloatCompareInstruction [new register [int type [1]], cmpop, a, b];
 }
 
-:IRValuedInstruction#select [IRType:type] [IRValue:if_true] if_ [IRValue:cond] else_ [IRValue:if_false] {
+%IRValuedInstruction#select [IRType:type] [IRValue:if_true] if_ [IRValue:cond] else_ [IRValue:if_false] {
     return IRSelectInstruction [new register [type], cond, if_true, if_false];
 }
 
-:IRValuedInstruction#call [IRType:ret_type_] [IRRegister:register] [[IRValue]:args] [W:varg_count] {
+%IRValuedInstruction#call [IRType:ret_type_] [IRRegister:register] [[IRValue]:args] [W:varg_count] {
     return IRCallInstruction [new register [ret_type_], IRBaseCallInstruction [register, args, varg_count]];
 }
 
-:IRInstruction#ret void instruction {
+%IRInstruction#ret void instruction {
     return IRRetVoidInstruction [];
 }
 
-:IRInstruction#ret [IRValue:returned] {
+%IRInstruction#ret [IRValue:returned] {
     return IRRetInstruction [returned];
 }
 
-:IRInstruction#branch to [IRBasicBlock:if_true] if_ [IRValue:cond] else_ [IRBasicBlock:if_false] {
+%IRInstruction#branch to [IRBasicBlock:if_true] if_ [IRValue:cond] else_ [IRBasicBlock:if_false] {
     return IRConditionalBranchInstruction [cond, if_true.id, if_false.id];
 }
 
-:IRInstruction#branch to [IRBasicBlock:block] {
+%IRInstruction#branch to [IRBasicBlock:block] {
     return IRUnconditionalBranchInstruction [block.id];
 }
 
-:IRInstruction#switch_ on [IRValue:switch_on] to [[IRConstant]:targets] [[IRBasicBlock]:branches] otherwise [IRBasicBlock:default_branch] {
+%IRInstruction#switch_ on [IRValue:switch_on] to [[IRConstant]:targets] [[IRBasicBlock]:branches] otherwise [IRBasicBlock:default_branch] {
     [W]:branch_ids = [W]*[branches].len;
     for (W:i enumerating branches) {
         branch_ids[i] = branches[i].id;
@@ -113,15 +113,15 @@ $import inner;
     return IRSwitchInstruction [switch_on, default_branch.id, targets, branch_ids];
 }
 
-:IRInstruction#unreachable instruction {
+%IRInstruction#unreachable instruction {
     return IRUnreachableInstruction [];
 }
 
-:IRInstruction#store [IRValue:val] in [IRValue:ptr] {
+%IRInstruction#store [IRValue:val] in [IRValue:ptr] {
     return IRStoreInstruction [val, ptr];
 }
 
-:IRInstruction#call void [IRRegister:register] [[IRValue]:args] [W:varg_count] {
+%IRInstruction#call void [IRRegister:register] [[IRValue]:args] [W:varg_count] {
     return IRCallVoidInstruction [IRBaseCallInstruction [register, args, varg_count]];
 }
 

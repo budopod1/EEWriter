@@ -219,7 +219,7 @@ Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str
     };
 
     ExternFunc:base = create new extern fn [ret_type_] [name] [arg_types_] [false] specifiers: [specifiers] fn_attrs: [fn_attrs];
-    IRBasicBlock:entry_bb = IRBasicBlock [0, [:IRInstruction] [], false];
+    IRBasicBlock:entry_bb = IRBasicBlock [0, [%IRInstruction] [], false];
     [IRBasicBlock]:basic_blocks = [IRBasicBlock] [entry_bb];
     base.ir_func.body = IRFuncBody [basic_blocks, 1];
     return Func_ [base, [Block] [], entry_bb, null];
@@ -386,7 +386,7 @@ IRBasicBlock#current bb {
 }
 
 IRBasicBlock#new bb {
-    IRBasicBlock:bb = IRBasicBlock [next id, [:IRInstruction] [], false];
+    IRBasicBlock:bb = IRBasicBlock [next id, [%IRInstruction] [], false];
     [[get active func.base.ir_func.body].unwrap.blocks].append[bb];
     return bb;
 }
@@ -415,16 +415,16 @@ IRValue#make_val [IRRegister:reg] {
     return IRValue [reg, null];
 }
 
-IRValue#make_val [:IRValuedInstruction:valued] {
+IRValue#make_val [%IRValuedInstruction:valued] {
     return make_val [valued.register];
 }
 
-IRValue#emit [:IRValuedInstruction:valued] {
+IRValue#emit [%IRValuedInstruction:valued] {
     [current bb.instructions].append[valued];
     return make_val [valued];
 }
 
-#emit [:IRInstruction:instruction] {
+#emit [%IRInstruction:instruction] {
     [current bb.instructions].append[instruction];
     if ((IRRetVoidInstruction?)instruction || (IRRetInstruction?)instruction
         || (IRConditionalBranchInstruction?)instruction || (IRUnconditionalBranchInstruction?)instruction
@@ -433,7 +433,7 @@ IRValue#emit [:IRValuedInstruction:valued] {
     };
 }
 
-#emit [:IRInstruction:instruction] unless terminated {
+#emit [%IRInstruction:instruction] unless terminated {
     if (!current bb.is_terminated) {
         emit [instruction];
     };
