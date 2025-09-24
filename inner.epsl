@@ -312,6 +312,9 @@ Bool#[Type_:type_].is_ptr {
     } elif ([type_.name] equals ["Optional"]) {
         return [type_.generics[0]].is_ptr;
     } else {
+        given [type_].get_struct as Struct_:struct_ {
+            return struct_.is_ref;
+        };
         return true;
     };
 }

@@ -1221,16 +1221,22 @@ Val#[Val:val].idx[Val:idx] {
 }
 
 Val#[Val:val].[L:field] {
-    Struct_:struct_ = assert [val] is ref struct_;
-    // +1 because of the ref_counter field
-    return *[access field [field+1] of [val] as [struct_.fields[field].type_]];
+    Struct_:struct_ = assert [val] is struct_;
+    Type_:field_type_ = struct_.fields[field].type_;
+    if (struct_.is_ref) {
+        // +1 because of the ref_counter field
+        return *[access field [field+1] of [val] as [field_type_]];
+    } else {
+        return basic val [field_type_] [emit [
+            extract value [[val].get] [[W] [field]] [[field_type_].ir]
+        ]];
+    };
 }
 
 Val#[Val:val].[Str:field] {
-    Struct_:struct_ = assert [val] is ref struct_;
+    Struct_:struct_ = assert [val] is struct_;
     L:field_idx = index of field [field] in [struct_];
-    // +1 because of the ref_counter field
-    return *[access field [field_idx+1] of [val] as [struct_.fields[field_idx].type_]];
+    return [val].[field_idx];
 }
 
 /*
@@ -1391,18 +1397,17 @@ Val#new array [Type_:type_] [[Val]:vals] {
     return new array [type_] [vals] with capacity [0];
 }
 
-Val#new ref struct_ [Type_:type_] [[Val]:fields] {
-    Struct_?:maybe_struct = [type_].get_struct;
-    if ([maybe_struct].is_null) {
-        abort "Expected struct type_, found {}" % type_.name;
+Val#new struct_ [Type_:type_] [[Val]:fields] {
+    Struct_:struct_ = assert [type_] is struct_;
+    if (struct_.is_ref) {
+        return new ref struct_ [struct_] [fields];
+    } else {
+        return new nonref struct_ [struct_] [fields];
     };
+}
 
-    Struct_:struct_ = [maybe_struct].unwrap;
-    if (!struct_.is_ref) {
-        abort "Expected ref struct type_, found {}" % struct_.id;
-    };
-
-    Val:result = malloc pointee [type_];
+Val#new ref struct_ [Struct_:struct_] [[Val]:fields] {
+    Val:result = malloc pointee [T_ [struct_.id]];
     [result].init_ref;
 
     for (L:i enumerating fields) {
@@ -1415,6 +1420,14 @@ Val#new ref struct_ [Type_:type_] [[Val]:fields] {
     };
 
     return result;
+}
+
+Val#new nonref struct_ [Struct_:struct_] [[Val]:fields] {
+    [IRValue]:fields_ir = [IRValue] [];
+    for (Val:field in fields) {
+        [fields_ir].append[[field].get];
+    };
+    return basic val [T_ [struct_.id]] [make nonref struct_ [fields_ir]];
 }
 
 #printf [Str:template] [[Val]:vals] {
@@ -1438,6 +1451,19 @@ Val#deep [Val:val] != null_ {
     return deep [val] == null_ invert: [true];
 }
 
+[Val]#[Val:val].all_components {
+    given [val.type_].get_struct as Struct_:struct_ {
+        Struct_:struct_ = assert [val] is struct_;
+        [Val]:fields = [Val] [];
+        for (L:i enumerating struct_.fields) {
+            [fields].append[load [[val].[i]]];
+        };
+        return fields;
+    } else {
+        return [Val] [];
+    };
+}
+
 Val#[Val:val].ref {
     assert [val] is nonnullable;
     assert [val] is ref;
@@ -1454,6 +1480,9 @@ Val#[Val:val].ref {
 
 #[Val:val].incr_ref {
     if (![val.type_].is_ref) {
+        for (Val:field in [val].all_components) {
+            [field].incr_ref;
+        };
         return;
     };
     val = load [val];
@@ -1471,6 +1500,9 @@ Val#[Val:val].ref {
 
 #[Val:val].checkless_decr_ref {
     if (![val.type_].is_ref) {
+        for (Val:field in [val].all_components) {
+            [field].checkless_decr_ref;
+        };
         return;
     };
     val = load [val];
@@ -1488,6 +1520,9 @@ Val#[Val:val].ref {
 
 #[Val:val].decr_ref {
     if (![val.type_].is_ref) {
+        for (Val:field in [val].all_components) {
+            [field].decr_ref;
+        };
         return;
     };
     val = load [val];
@@ -1507,6 +1542,9 @@ Val#[Val:val].ref {
 
 #[Val:val].check_ref {
     if (![val.type_].is_ref) {
+        for (Val:field in [val].all_components) {
+            [field].check_ref;
+        };
         return;
     };
     val = load [val];
