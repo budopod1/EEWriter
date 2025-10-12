@@ -147,19 +147,18 @@ IRType#[Type_:type_].ir_ret_type_ {
     };
 }
 
-ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] fn_attrs: [[Str]:fn_attrs] {
+ExternFunc#create new extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] fn_attrs: [[Str]:fn_attrs] {
     [IRArgument]:args = [IRArgument] [];
     for (W:i enumerating arg_types_) {
         Type_:arg_type_ = arg_types_[i];
         [args].append[IRArgument [[arg_type_].ir, get type_ attrs [arg_type_], "arg{}" % i]];
     };
-    Type_:full_ret_type_ = [ret_type_] || [T_ ["Null"]];
-    IRReturnType:ret = IRReturnType [[full_ret_type_].ir_ret_type_, get type_ attrs [full_ret_type_]];
+    IRReturnType:ret = IRReturnType [[ret_type_].ir_ret_type_, get type_ attrs [ret_type_]];
     IRFunc:ir = IRFunc [ret, specifiers, name, args, has_vargs, fn_attrs, null];
     return ExternFunc [ir, ret_type_, arg_types_];
 }
 
-Bool#extern func matches [ExternFunc:fn] [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] {
+Bool#extern func matches [ExternFunc:fn] [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] {
     if ([fn.ir_func.name] not equals [name]) {
         return false;
     };
@@ -180,7 +179,7 @@ Bool#extern func matches [ExternFunc:fn] [Type_?:ret_type_] [Str:name] [[Type_]:
     return true;
 }
 
-ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] {
+ExternFunc#require extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] {
     Str:specifiers = next fn specifiers;
     [Str]:fn_attrs = next fn attrs;
     ExternFunc?:maybe_fn = get func named [name];
@@ -198,7 +197,7 @@ ExternFunc#require extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] 
     return extern_func;
 }
 
-Func_?#defined fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
+Func_?#defined fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] {
     for (Func_:func in get state.funcs) {
         if ([func.base.ir_func.name] equals [name]) {
             if (extern func matches [func.base] [ret_type_] [name] [arg_types_] [false]) {
@@ -212,7 +211,7 @@ Func_?#defined fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
     return null;
 }
 
-Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str:specifiers] fn_attrs: [[Str]:fn_attrs] {
+Func_#new fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str:specifiers] fn_attrs: [[Str]:fn_attrs] {
     [ExternFunc]:extern_funcs = get state.extern_funcs;
     for (W:i enumerating extern_funcs step -1) {
         ExternFunc:extern_func = extern_funcs[i];
@@ -258,7 +257,7 @@ IRType#[Type_:type_].ir {
         return int type [1];
     } elif (([type_.name] equals ["Internal"])
         || ([type_.name] equals ["Array"]) || ([type_.name] equals ["#Pointer"])
-        || ([type_.name] equals ["#FuncPtr"]) || ([type_.name] equals ["#VoidFuncPtr"])
+        || ([type_.name] equals ["#FuncPtr"])
         || ([type_.name] equals ["#StructBase"])) {
         return ptr type;
     } elif ([type_].is_poly) {
@@ -325,8 +324,7 @@ Bool#[Type_:type_].is_nonnull_ptr {
 
 Bool#[Type_:type_].has_pointee {
     return [type_].is_ptr && !(
-        ([type_.name] equals ["Internal"]) || ([type_.name] equals ["#FuncPtr"])
-        || ([type_.name] equals ["#VoidFuncPtr"]));
+        ([type_.name] equals ["Internal"]) || ([type_.name] equals ["#FuncPtr"]));
 }
 
 IRType#[Type_:type_].pointee {
@@ -498,7 +496,7 @@ IRValue#make const nonref struct_ [[IRValue]:elements] {
     return make const [struct_ type [elem_types]] [const_elements];
 }
 
-#call [Type_?:ret_type_] [IRRegister:register] [[Type_]:arg_types_] [[Val]:args] {
+#call [Type_:ret_type_] [IRRegister:register] [[Type_]:arg_types_] [[Val]:args] {
     [IRValue]:arg_vals = [IRValue] [];
     if ([args].len < [arg_types_].len) {
         abort "Not enough arguments for function";
@@ -514,13 +512,12 @@ IRValue#make const nonref struct_ [[IRValue]:elements] {
 
     W:varg_count = [args].len - [arg_types_].len;
 
-    Type_:full_ret_type_ = [ret_type_] || [T_ ["Null"]];
-    if ([full_ret_type_.name] equals ["Null"]) {
+    if ([ret_type_.name] equals ["Null"]) {
         emit [call void [register] [arg_vals] [varg_count]];
         get active func.last_ret_val = c null_ [Null_];
     } else {
-        IRValue:result = emit [call [[full_ret_type_].ir] [register] [arg_vals] [varg_count]];
-        get active func.last_ret_val = basic val [full_ret_type_] [result];
+        IRValue:result = emit [call [[ret_type_].ir] [register] [arg_vals] [varg_count]];
+        get active func.last_ret_val = basic val [ret_type_] [result];
     };
 }
 
@@ -942,7 +939,7 @@ Bool#[Val:val].is_global_ptr_const {
 #[Val:outer_val]._ref_free_array {
     assert [outer_val] is array;
 
-if (specialized fn [null] ["free"] [[Val] [outer_val]]) {
+if (specialized fn [Null_] ["free"] [[Val] [outer_val]]) {
     Val:val = func arg [0];
     Type_:sub = val.type_.generics[0];
 
@@ -985,7 +982,7 @@ end fn;
     assert [val] is poly;
 
     Val:free_fn = [[val].vtable].vtable_item[4];
-    free_fn = bitcast [free_fn] to [VoidFuncPtr [[Type_] [val.type_]]];
+    free_fn = bitcast [free_fn] to [FuncPtr [Null_] [[Type_] [val.type_]]];
     call [free_fn] [[Val] [val]];
 }
 
@@ -994,7 +991,7 @@ end fn;
         generate free fn for_ [struct_] private: [true];
     };
     Str:free_symbol = get free fn symbol for_ [struct_];
-    extern fn [null] [free_symbol] [[Type_] [val.type_]] [[Val] [val]];
+    extern fn [Null_] [free_symbol] [[Type_] [val.type_]] [[Val] [val]];
 }
 
 Str#get free fn symbol for_ [Struct_:struct_] {

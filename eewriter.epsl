@@ -57,7 +57,7 @@ Label {
 
 ExternFunc {
     IRFunc:ir_func,
-    Type_?:ret_type_,
+    Type_:ret_type_,
     [Type_]:args
 }
 
@@ -82,10 +82,6 @@ Type_ {
 }
 
 Bool#[Type_:a] == [Type_:b] {
-    return [a] deep equals [b];
-}
-
-Bool#[Type_?:a] == [Type_?:b] {
     return [a] deep equals [b];
 }
 
@@ -161,10 +157,6 @@ Type_#Pointer [Type_:sub] {
 
 Type_#FuncPtr [Type_:ret_type_] [[Type_]:arg_types_] {
     return Type_ ["#FuncPtr", -1, [[Type_] [ret_type_]] + [arg_types_]];
-}
-
-Type_#VoidFuncPtr [[Type_]:arg_types_] {
-    return Type_ ["#VoidFuncPtr", -1, arg_types_];
 }
 
 Type_#VTable [Type_:generic] {
@@ -310,7 +302,7 @@ Bool#[Type_:type_].is_numeric {
 }
 
 Bool#[Type_:type_].is_callable {
-    return ([type_.name] equals ["#FuncPtr"]) || ([type_.name] equals ["#VoidFuncPtr"]);
+    return [type_.name] equals ["#FuncPtr"];
 }
 
 Bool#[Type_:type_].is_nullable {
@@ -748,11 +740,11 @@ ExternFunc#get fn [Str:name] {
     [fn_attrs].extend[attrs];
 }
 
-#extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
+#extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] {
     require extern fn [ret_type_] [name] [arg_types_] [false];
 }
 
-#extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] vargs {
+#extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] vargs {
     require extern fn [ret_type_] [name] [arg_types_] [true];
 }
 
@@ -762,12 +754,8 @@ ExternFunc#get fn [Str:name] {
 
 #call [Val:func] [[Val]:args] {
     assert [func] is callable;
-    [Type_]:arg_types_ = func.type_.generics;
-    Type_?:ret_type_ = null;
-    if ([func.type_.name] equals ["#FuncPtr"]) {
-        arg_types_ = [arg_types_].clone;
-        ret_type_ = [arg_types_].pop[0];
-    };
+    [Type_]:arg_types_ = [func.type_.generics].clone;
+    Type_:ret_type_ = [arg_types_].pop[0];
     IRRegister?:maybe_register = [func].get.register;
     if ([maybe_register].is_null) {
         abort "Can't call a constant as a a function pointer";
@@ -775,7 +763,7 @@ ExternFunc#get fn [Str:name] {
     call [ret_type_] [[maybe_register].unwrap] [arg_types_] [args];
 }
 
-#extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args] {
+#extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args] {
     if ([arg_types_].len != [provided_args].len) {
         abort "The number of arguments and the number of argument types_ must match (got {} and {} for {})"
             % [provided_args].len % [arg_types_].len % name;
@@ -784,12 +772,12 @@ ExternFunc#get fn [Str:name] {
     call [func] [provided_args];
 }
 
-#extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] vargs [[Val]:provided_args] {
+#extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] vargs [[Val]:provided_args] {
     ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [true];
     call [func] [provided_args];
 }
 
-Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
+Bool#fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] {
     Str:specifiers = next fn specifiers;
     [Str]:fn_attrs = next fn attrs;
     Func_?:defined_fn = defined fn [ret_type_] [name] [arg_types_];
@@ -804,7 +792,7 @@ Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
     };
 }
 
-Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args] {
+Bool#fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args] {
     if ([arg_types_].len != [provided_args].len) {
         abort "The number of arguments and the number of argument types_ must match (got {} and {} for {})"
             % [provided_args].len % [arg_types_].len % name;
@@ -825,7 +813,7 @@ Bool#fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args]
     };
 }
 
-Bool#specialized fn [Type_?:ret_type_] [Str:name] [[Val]:args] {
+Bool#specialized fn [Type_:ret_type_] [Str:name] [[Val]:args] {
     [Type_]:arg_types_ = [Type_] [];
     for (Val:arg in args) {
         [arg_types_].append[arg.type_];
@@ -839,7 +827,7 @@ Bool#specialized fn [Type_?:ret_type_] [Str:name] [[Val]:args] {
     return fn [ret_type_] [full_name] [arg_types_] [args];
 }
 
-Bool#specialized fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
+Bool#specialized fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] {
     Str:full_name = [name].clone;
     for (Type_:arg_type_ in arg_types_) {
         [full_name].append['_'];
@@ -881,13 +869,9 @@ Val#func ret {
 
 Type_#[ExternFunc:func].ptr_type_ {
     if (func.ir_func.has_vargs) {
-        abort "Pointers to functions with vargs currently can't be represented in the EEWriter types system";
+        abort "Pointers to functions with vargs currently can't be represented in the EEWriter type_ system";
     };
-    if (func.ret_type_) {
-        return FuncPtr [[func.ret_type_].unwrap] [func.args];
-    } else {
-        return VoidFuncPtr [func.args];
-    };
+    return FuncPtr [func.ret_type_] [func.args];
 }
 
 Val#func ptr {
@@ -1104,11 +1088,11 @@ Val#realloc [Val:val] to [Val:count] elements {
 }
 
 #free [Val:val] {
-    extern fn [null] ["free"] [[Type_] [Internal_]] [[Val] [cast [val] to [Internal_]]];
+    extern fn [Null_] ["free"] [[Type_] [Internal_]] [[Val] [cast [val] to [Internal_]]];
 }
 
 #memcpy [Val:count] [Val:v1] to [Val:v2] {
-    extern fn [null] ["llvm.memcpy.p0.p0.i64"] 
+    extern fn [Null_] ["llvm.memcpy.p0.p0.i64"] 
         [[Type_] [Internal_, Internal_, L_, Bool_]] 
         [[Val] [
             cast [v2] to [Internal_], cast [v1] to [Internal_],
@@ -1122,7 +1106,7 @@ Val#realloc [Val:val] to [Val:count] elements {
 }
 
 #memmove [Val:count] [Val:v1] to [Val:v2] {
-    extern fn [null] ["llvm.memmove.p0.p0.i64"] 
+    extern fn [Null_] ["llvm.memmove.p0.p0.i64"] 
         [[Type_] [Internal_, Internal_, L_, Bool_]] 
         [[Val] [
             cast [v2] to [Internal_], cast [v1] to [Internal_],
@@ -1132,7 +1116,7 @@ Val#realloc [Val:val] to [Val:count] elements {
 }
 
 #memset [Val:count] bytes of [Val:buffer] to [Val:ch] {
-    extern fn [null] ["llvm.memset.p0.i64"]
+    extern fn [Null_] ["llvm.memset.p0.i64"]
         [[Type_] [Internal_, Byte_, L_, Bool_]]
         [[Val] [
             cast [buffer] to [Internal_], cast [ch] to [Byte_],
@@ -1144,7 +1128,7 @@ Val#realloc [Val:val] to [Val:count] elements {
     if (![val.type_] == [Bool_]) {
         abort "Can only assume that a boolean is true, not a {}" % [val.type_].stringify;
     };
-    extern fn [null] ["llvm.assume"] [[Type_] [Bool_]] [[Val] [val]];
+    extern fn [Null_] ["llvm.assume"] [[Type_] [Bool_]] [[Val] [val]];
 }
 
 // returns the val with the expectation attached
@@ -1179,7 +1163,7 @@ Val#[Val:vtable].vtable_item[W:i] {
         L_, // the length of the extendee list
         Pointer [L_], // the extendee list
         Str_, // the struct id (as a Str_)
-        VoidFuncPtr [[Type_] [Internal_]] // the free fn
+        FuncPtr [Null_] [[Type_] [Internal_]] // the free fn
     ][i];
     return load [*[access field [i] of [vtable] as [type_]]];
 }
@@ -1569,10 +1553,10 @@ Val#[Val:val].ref {
     if (is_private) {
         private accessibility;
     };
-if (fn [null] [get free fn symbol for_ [struct_]] [[Type_] [type_]]) {
+if (fn [Null_] [get free fn symbol for_ [struct_]] [[Type_] [type_]]) {
     Val:val = func arg [0];
     given (struct_.destructor as Str:destructor_symbol) {
-        extern fn [null] [destructor_symbol] [[Type_] [type_]] [[Val] [val]];
+        extern fn [Null_] [destructor_symbol] [[Type_] [type_]] [[Val] [val]];
     };
     for (L:i enumerating struct_.fields) {
         if ([struct_.fields[i].type_].is_ref) {
@@ -1602,7 +1586,7 @@ end fn;
     Val:struct_id_str = make global Str_ [struct_.id];
 
     Str:free_symbol = get free fn symbol for_ [struct_];
-    extern fn [null] [free_symbol] [[Type_] [struct_type_]];
+    extern fn [Null_] [free_symbol] [[Type_] [struct_type_]];
     Val:free_fn_ptr = func ptr;
 
     Type_:vtable_type_ = VTable [Poly_ [struct_type_]];
