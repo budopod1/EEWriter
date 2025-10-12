@@ -121,11 +121,10 @@ Str#next fn specifiers {
     return [attrs] || [[Str] []];
 }
 
-[Str]#get type_ attrs [Type_?:maybe_type_] {
-    if ([maybe_type_].is_null) {
+[Str]#get type_ attrs [Type_:type_] {
+    if ([type_.name] equals ["Null"]) {
         return [Str] [];
     };
-    Type_:type_ = [maybe_type_].unwrap;
     [Str]:attrs = [Str] ["noundef"];
     if ([type_].has_pointee) {
         W:min_sizeof = get min comptime sizeof [[type_].pointee];
@@ -140,13 +139,22 @@ Str#next fn specifiers {
     return attrs;
 }
 
+IRType#[Type_:type_].ir_ret_type_ {
+    if ([type_.name] equals ["Null"]) {
+        return IRType [null, null, null, IRVoidType [], null, null, null];
+    } else {
+        return [type_].ir;
+    };
+}
+
 ExternFunc#create new extern fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] specifiers: [Str:specifiers] fn_attrs: [[Str]:fn_attrs] {
     [IRArgument]:args = [IRArgument] [];
     for (W:i enumerating arg_types_) {
         Type_:arg_type_ = arg_types_[i];
         [args].append[IRArgument [[arg_type_].ir, get type_ attrs [arg_type_], "arg{}" % i]];
     };
-    IRReturnType:ret = IRReturnType [[ret_type_].ir, get type_ attrs [ret_type_]];
+    Type_:full_ret_type_ = [ret_type_] || [T_ ["Null"]];
+    IRReturnType:ret = IRReturnType [[full_ret_type_].ir_ret_type_, get type_ attrs [full_ret_type_]];
     IRFunc:ir = IRFunc [ret, specifiers, name, args, has_vargs, fn_attrs, null];
     return ExternFunc [ir, ret_type_, arg_types_];
 }
@@ -238,14 +246,6 @@ Func_#new fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] specifiers: [Str
 Block#pop from block stack {
     [Block]:block_stack = get active func.block_stack;
     return [block_stack].pop_end;
-}
-
-IRType#[Type_?:maybe_type_].ir {
-    given (maybe_type_ as Type_:type_) {
-        return [type_].ir;
-    } else {
-        return IRType [null, null, null, IRVoidType [], null, null, null];
-    };
 }
 
 IRType#[Type_:type_].ir {
@@ -514,11 +514,13 @@ IRValue#make const nonref struct_ [[IRValue]:elements] {
 
     W:varg_count = [args].len - [arg_types_].len;
 
-    given (ret_type_ as Type_:known_ret_type_) {
-        IRValue:result = emit [call [[known_ret_type_].ir] [register] [arg_vals] [varg_count]];
-        get active func.last_ret_val = basic val [known_ret_type_] [result];
-    } else {
+    Type_:full_ret_type_ = [ret_type_] || [T_ ["Null"]];
+    if ([full_ret_type_.name] equals ["Null"]) {
         emit [call void [register] [arg_vals] [varg_count]];
+        get active func.last_ret_val = c null_ [Null_];
+    } else {
+        IRValue:result = emit [call [[full_ret_type_].ir] [register] [arg_vals] [varg_count]];
+        get active func.last_ret_val = basic val [full_ret_type_] [result];
     };
 }
 

@@ -854,7 +854,11 @@ Bool#specialized fn [Type_?:ret_type_] [Str:name] [[Type_]:arg_types_] {
 }
 
 #ret [Val:val] {
-    emit [ret [[val].get]];
+    if ([val.type_.name] equals ["Null"]) {
+        ret void;
+    } else {
+        emit [ret [[val].get]];
+    };
 }
 
 #mark as unreachable {
