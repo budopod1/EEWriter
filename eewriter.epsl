@@ -225,7 +225,7 @@ Val#c [W:val] {
 }
 
 Val#c [L:val] {
-    abort "Calling 'c' with a value of type L is ambiguous, either use 'c L_' or cast the argument to a W";
+    abort ["Calling 'c' with a value of type L is ambiguous, either use 'c L_' or cast the argument to a W"];
 }
 
 Val#c L_ [L:val] {
@@ -261,7 +261,7 @@ Val#c null_ [Type_:type_] {
     } elif ([type_.name] equals ["Null"]) {
         return const val [type_][make const [false]];
     };
-    abort "Can't produce null of type_ {}" % [type_].stringify;
+    abort ["Can't produce null of type_ {}" % [type_].stringify];
 }
 
 Val#c null_ {
@@ -330,7 +330,7 @@ Bool#[Type_:type_].is_ref {
 
 #assert [Type_:type_] is array {
     if ([type_.name] not equals ["Array"]) {
-        abort "Expected type_ Array, found {}" % [type_].stringify;
+        abort ["Expected type_ Array, found {}" % [type_].stringify];
     };
 }
 
@@ -340,7 +340,7 @@ Bool#[Type_:type_].is_ref {
 
 #assert [Type_:type_] is poly {
     if (![type_].is_poly) {
-        abort "Expected type_ Poly, found {}" % [type_].stringify;
+        abort ["Expected type_ Poly, found {}" % [type_].stringify];
     };
 }
 
@@ -350,7 +350,7 @@ Bool#[Type_:type_].is_ref {
 
 #assert [Type_:type_] is vtable {
     if ([type_.name] not equals ["#VTable"]) {
-        abort "Expected type_ VTable, found {}" % [type_].stringify;
+        abort ["Expected type_ VTable, found {}" % [type_].stringify];
     };
 }
 
@@ -360,7 +360,7 @@ Bool#[Type_:type_].is_ref {
 
 #assert [Type_:type_] is pointer {
     if ([type_.name] not equals ["#Pointer"]) {
-        abort "Expected type_ Pointer, found {}" % [type_].stringify;
+        abort ["Expected type_ Pointer, found {}" % [type_].stringify];
     };
 }
 
@@ -370,7 +370,7 @@ Bool#[Type_:type_].is_ref {
 
 #assert [Type_:type_] is callable {
     if (![type_].is_callable) {
-        abort "Expected callable type_, found {}" % [type_].stringify;
+        abort ["Expected callable type_, found {}" % [type_].stringify];
     };
 }
 
@@ -381,7 +381,7 @@ Bool#[Type_:type_].is_ref {
 Struct_#assert [Type_:val] is struct_ {
     Struct_?:maybe_struct = [val].get_struct;
     if ([maybe_struct].is_null) {
-        abort "Expected value with a struct type_, found a value of type_ {}" % [val].stringify;
+        abort ["Expected value with a struct type_, found a value of type_ {}" % [val].stringify];
     };
     return [maybe_struct].unwrap;
 }
@@ -393,7 +393,7 @@ Struct_#assert [Val:val] is struct_ {
 Struct_#assert [Type_:val] is ref struct_ {
     Struct_:struct_ = assert [val] is struct_;
     if (!struct_.is_ref) {
-        abort "Expected value with a ref struct type_, found a value of type_ {}" % [val].stringify;
+        abort ["Expected value with a ref struct type_, found a value of type_ {}" % [val].stringify];
     };
     return struct_;
 }
@@ -405,7 +405,7 @@ Struct_#assert [Val:val] is ref struct_ {
 Struct_#assert [Type_:val] is nonref struct_ {
     Struct_:struct_ = assert [val] is struct_;
     if (struct_.is_ref) {
-        abort "Expected value with a nonref struct type_, found a value of type_ {}" % [val].stringify;
+        abort ["Expected value with a nonref struct type_, found a value of type_ {}" % [val].stringify];
     };
     return struct_;
 }
@@ -442,19 +442,19 @@ Val#deep unwrap nullability [Val:val] {
 
 #assert [Val:val] is nullable {
     if (![val.type_].is_nullable) {
-        abort "Val of type_ {} is never null" % [val.type_].stringify;
+        abort ["Val of type_ {} is never null" % [val.type_].stringify];
     };
 }
 
 #assert [Val:val] is nonnullable {
     if ([val.type_].is_nullable) {
-        abort "Val of type_ {} may be null" % [val.type_].stringify;
+        abort ["Val of type_ {} may be null" % [val.type_].stringify];
     };
 }
 
 #assert [Type_:type_] is optional {
     if ([type_.name] not equals ["Optional"]) {
-        abort "Type_ {} is not an Optional" % [type_].stringify;
+        abort ["Type_ {} is not an Optional" % [type_].stringify];
     };
 }
 
@@ -464,7 +464,7 @@ Val#deep unwrap nullability [Val:val] {
 
 #assert [Val:val] is ref {
     if (![val.type_].is_ref) {
-        abort "Val of type_ {} is not a ref type_" % [val.type_].stringify;
+        abort ["Val of type_ {} is not a ref type_" % [val.type_].stringify];
     };
 }
 
@@ -475,7 +475,7 @@ Type_#assert type_ equality [Val:a], [Val:b] {
 
 #assert type_ equality [Type_:a], [Type_:b] {
     if (![a] == [b]) {
-        abort "Expected equal types_, found {} and {}" % [a].stringify % [b].stringify;
+        abort ["Expected equal types_, found {} and {}" % [a].stringify % [b].stringify];
     };
 }
 
@@ -634,10 +634,10 @@ Val#is_NaN[Val:a] {
 
 Val#[Val:a] shift left [Val:b] {
     if (![a.type_].is_int || ![b.type_].is_int) {
-        abort "Bitshift operations require both types to be an int";
+        abort ["Bitshift operations require both types to be an int"];
     };
     if (a.type_.bits != b.type_.bits) {
-        abort "Both operands in a bitshift must have the same number of bits";
+        abort ["Both operands in a bitshift must have the same number of bits"];
     };
 
     return basic val [a.type_] [emit [IRLeftShiftInstruction [
@@ -647,10 +647,10 @@ Val#[Val:a] shift left [Val:b] {
 
 Val#[Val:a] shift right [Val:b] {
     if (![a.type_].is_int || ![b.type_].is_int) {
-        abort "Bitshift operations require both types to be an int";
+        abort ["Bitshift operations require both types to be an int"];
     };
     if (a.type_.bits != b.type_.bits) {
-        abort "Both operands in a bitshift must have the same number of bits";
+        abort ["Both operands in a bitshift must have the same number of bits"];
     };
 
     if ([a.type_].is_signed_int) {
@@ -670,7 +670,7 @@ Val#&[Val:v] {
 
 Val#*[Val:val] {
     if ([val.type_.name] not equals ["#Pointer"]) {
-        abort "Can only directly dereference Pointer type_, not {}" % [val.type_].stringify;
+        abort ["Can only directly dereference Pointer type_, not {}" % [val.type_].stringify];
     };
     return assignable val [val.type_.generics[0]] [[val].get];
 }
@@ -685,13 +685,13 @@ Val#load [Val:val] {
 
 #[Val:assignable] = [Val:val] {
     if (![val.type_] == [assignable.type_]) {
-        abort "Cannot assign value of type_ {} to assignable of type_ {}" % [val.type_].stringify % [assignable.type_].stringify;
+        abort ["Cannot assign value of type_ {} to assignable of type_ {}" % [val.type_].stringify % [assignable.type_].stringify];
     };
 
     if (assignable.assignable) {
         emit [store [[val].get] in [[assignable.assignable].unwrap.addr]];
     } else {
-        abort "Expected assignable";
+        abort ["Expected assignable"];
     };
 }
 
@@ -712,7 +712,7 @@ Val#var [Val:init] {
 ExternFunc#get fn [Str:name] {
     ExternFunc?:fn = get func named [name];
     if ([fn].is_null) {
-        abort "Cannot find function with requested name {}" % name;
+        abort ["Cannot find function with requested name {}" % name];
     };
     return [fn].unwrap;
 }
@@ -758,15 +758,15 @@ ExternFunc#get fn [Str:name] {
     Type_:ret_type_ = [arg_types_].pop[0];
     IRRegister?:maybe_register = [func].get.register;
     if ([maybe_register].is_null) {
-        abort "Can't call a constant as a a function pointer";
+        abort ["Can't call a constant as a a function pointer"];
     };
     call [ret_type_] [[maybe_register].unwrap] [arg_types_] [args];
 }
 
 #extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args] {
     if ([arg_types_].len != [provided_args].len) {
-        abort "The number of arguments and the number of argument types_ must match (got {} and {} for {})"
-            % [provided_args].len % [arg_types_].len % name;
+        abort ["The number of arguments and the number of argument types_ must match (got {} and {} for {})"
+            % [provided_args].len % [arg_types_].len % name];
     };
     ExternFunc:func = require extern fn [ret_type_] [name] [arg_types_] [false];
     call [func] [provided_args];
@@ -794,8 +794,8 @@ Bool#fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] {
 
 Bool#fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [[Val]:provided_args] {
     if ([arg_types_].len != [provided_args].len) {
-        abort "The number of arguments and the number of argument types_ must match (got {} and {} for {})"
-            % [provided_args].len % [arg_types_].len % name;
+        abort ["The number of arguments and the number of argument types_ must match (got {} and {} for {})"
+            % [provided_args].len % [arg_types_].len % name];
     };
     Str:specifiers = next fn specifiers;
     [Str]:fn_attrs = next fn attrs;
@@ -862,14 +862,14 @@ Bool#specialized fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] {
 Val#func ret {
     Val?:ret = get active func.last_ret_val;
     if ([ret].is_null) {
-        abort "The current function has not called another function";
+        abort ["The current function has not called another function"];
     };
     return [ret].unwrap;
 }
 
 Type_#[ExternFunc:func].ptr_type_ {
     if (func.ir_func.has_vargs) {
-        abort "Pointers to functions with vargs currently can't be represented in the EEWriter type_ system";
+        abort ["Pointers to functions with vargs currently can't be represented in the EEWriter type_ system"];
     };
     return FuncPtr [func.ret_type_] [func.args];
 }
@@ -877,7 +877,7 @@ Type_#[ExternFunc:func].ptr_type_ {
 Val#func ptr {
     ExternFunc?:func = get state.last_defined_func;
     if ([func].is_null) {
-        abort "A function must be defined or required before a function pointer can be created";
+        abort ["A function must be defined or required before a function pointer can be created"];
     };
     return [[func].unwrap].func_ptr;
 }
@@ -998,7 +998,7 @@ PHINode#new PHI [Type_:type_] {
 
 #[PHINode:phi].add_incoming[Val:val] {
     if (![val.type_] == [phi.type_]) {
-        abort "Incorrect type_ for PHI operand: expected {}, found {}" % [phi.type_].stringify % [val.type_].stringify;
+        abort ["Incorrect type_ for PHI operand: expected {}, found {}" % [phi.type_].stringify % [val.type_].stringify];
     };
     val = load [val];
     if (val.basic) {
@@ -1006,7 +1006,7 @@ PHINode#new PHI [Type_:type_] {
         [phi.ir.vals].append[basic.val];
         [phi.ir.block_ids].append[basic.bb.id];
     } else {
-        abort "Expected BasicVal";
+        abort ["Expected BasicVal"];
     };
 }
 
@@ -1126,7 +1126,7 @@ Val#realloc [Val:val] to [Val:count] elements {
 
 #assume [Val:val] {
     if (![val.type_] == [Bool_]) {
-        abort "Can only assume that a boolean is true, not a {}" % [val.type_].stringify;
+        abort ["Can only assume that a boolean is true, not a {}" % [val.type_].stringify];
     };
     extern fn [Null_] ["llvm.assume"] [[Type_] [Bool_]] [[Val] [val]];
 }
@@ -1134,7 +1134,7 @@ Val#realloc [Val:val] to [Val:count] elements {
 // returns the val with the expectation attached
 Val#expect [Val:val] to be [Bool:truth_value] {
     if (![val.type_] == [Bool_]) {
-        abort "Can only provide an expectation of a boolean's value, found a {}" % [val.type_].stringify;
+        abort ["Can only provide an expectation of a boolean's value, found a {}" % [val.type_].stringify];
     };
     extern fn [Bool_] ["llvm.expect.i1"] [[Type_] [Bool_, Bool_]] [[Val] [val, c [truth_value]]];
     return func ret;
@@ -1204,7 +1204,7 @@ Val#[Val:val].idx[Val:idx] {
     } elif ([val.type_.name] equals ["#Pointer"]) {
         return *[[val] shifted by [idx]];
     } else {
-        abort "Cannot index into value of type_ {}" % [val.type_].stringify;
+        abort ["Cannot index into value of type_ {}" % [val.type_].stringify];
     };
 }
 
@@ -1244,7 +1244,7 @@ Val#with field [Str:field] of [Val:val] as [Val:new_] {
     L:field_idx = index of field [field] in [struct_];
     Type_:field_type_ = struct_.fields[field_idx].type_;
     if (![new_.type_] == [field_type_]) {
-        abort "Field {} has type_ {}, cannot insert value of type_ {}" % field % [field_type_].stringify % [new_.type_].stringify;
+        abort ["Field {} has type_ {}, cannot insert value of type_ {}" % field % [field_type_].stringify % [new_.type_].stringify];
     };
     return basic val [field_type_] [emit [
         insert value [[new_].get] [[val].get] [[W] [field_idx]]
@@ -1354,7 +1354,7 @@ Val#make global Str_ [Str:string] {
 
 Val#new array [Type_:type_] [[Val]:vals] with capacity [L:capacity] {
     if ([type_.name] not equals ["Array"]) {
-        abort "Expected Array type_, found {}" % [type_].stringify;
+        abort ["Expected Array type_, found {}" % [type_].stringify];
     };
 
     Val:result = malloc pointee [type_];
@@ -1402,7 +1402,7 @@ Val#new ref struct_ [Struct_:struct_] [[Val]:fields] {
         Val:field_val = fields[i];
         Field:struct_field = struct_.fields[i];
         if (![field_val.type_] == [struct_field.type_]) {
-            abort "Expected value of type_ {} for field {}, found value of type_ {}" % [struct_field.type_].stringify % struct_field.name % [field_val.type_].stringify;
+            abort ["Expected value of type_ {} for field {}, found value of type_ {}" % [struct_field.type_].stringify % struct_field.name % [field_val.type_].stringify];
         };
         [[result].[i]] = [field_val];
     };
