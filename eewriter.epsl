@@ -1208,7 +1208,7 @@ Val#[Val:val].idx[Val:idx] {
     };
 }
 
-Val#[Val:val].[L:field] {
+Val#[Val:val].[W:field] {
     Struct_:struct_ = assert [val] is struct_;
     Type_:field_type_ = struct_.fields[field].type_;
     if (struct_.is_ref) {
@@ -1224,7 +1224,7 @@ Val#[Val:val].[L:field] {
 Val#[Val:val].[Str:field] {
     Struct_:struct_ = assert [val] is struct_;
     L:field_idx = index of field [field] in [struct_];
-    return [val].[field_idx];
+    return [val].[(W)field_idx];
 }
 
 /*
@@ -1398,7 +1398,7 @@ Val#new ref struct_ [Struct_:struct_] [[Val]:fields] {
     Val:result = malloc pointee [T_ [struct_.id]];
     [result].init_ref;
 
-    for (L:i enumerating fields) {
+    for (W:i enumerating fields) {
         Val:field_val = fields[i];
         Field:struct_field = struct_.fields[i];
         if (![field_val.type_] == [struct_field.type_]) {
@@ -1443,7 +1443,7 @@ Val#deep [Val:val] != null_ {
     given [val.type_].get_struct as Struct_:struct_ {
         Struct_:struct_ = assert [val] is struct_;
         [Val]:fields = [Val] [];
-        for (L:i enumerating struct_.fields) {
+        for (W:i enumerating struct_.fields) {
             [fields].append[load [[val].[i]]];
         };
         return fields;
@@ -1558,7 +1558,7 @@ if (fn [Null_] [get free fn symbol for_ [struct_]] [[Type_] [type_]]) {
     given (struct_.destructor as Str:destructor_symbol) {
         extern fn [Null_] [destructor_symbol] [[Type_] [type_]] [[Val] [val]];
     };
-    for (L:i enumerating struct_.fields) {
+    for (W:i enumerating struct_.fields) {
         if ([struct_.fields[i].type_].is_ref) {
             [load [[val].[i]]].decr_ref;
         };

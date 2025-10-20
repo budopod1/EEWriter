@@ -127,7 +127,7 @@ Str#next fn specifiers {
     };
     [Str]:attrs = [Str] ["noundef"];
     if ([type_].has_pointee) {
-        W:min_sizeof = get min comptime sizeof [[type_].pointee];
+        L:min_sizeof = get min comptime sizeof [[type_].pointee];
         if (min_sizeof == 0) {
 
         } elif ([type_].is_nullable) {
@@ -353,7 +353,7 @@ IRType#[Type_:type_].pointee {
     };
 }
 
-W#get min comptime sizeof [IRType:type] {
+L#get min comptime sizeof [IRType:type] {
     given (type.int as IRIntType:int_t) {
         return int_t.bits ~/ 8;
     } given (type.float as IRFloatType:float_t) {
@@ -361,7 +361,7 @@ W#get min comptime sizeof [IRType:type] {
     } given (type.array as IRArrayType:arr_t) {
         return arr_t.elem_count * get min comptime sizeof [arr_t.elem_type];
     } given (type.literal_struct as IRStructType:struct_t) {
-        W:total = 0;
+        L:total = 0;
         for (IRType:member in struct_t.members) {
             total += get min comptime sizeof [member];
         };
@@ -478,7 +478,7 @@ IRValue#make nonref struct_ [[IRValue]:elems] {
         [member_types_].append[[elem].type];
     };
     IRValue:struct_ = make const [struct_ type [member_types_]] poison;
-    for (L:i enumerating elems) {
+    for (W:i enumerating elems) {
         struct_ = emit [insert value [elems[i]] [struct_] [[W] [i]]];
     };
     return struct_;
@@ -510,7 +510,7 @@ IRValue#make const nonref struct_ [[IRValue]:elements] {
         [arg_vals].append[[args[i]].get];
     };
 
-    W:varg_count = [args].len - [arg_types_].len;
+    W:varg_count = (W)([args].len - [arg_types_].len);
 
     if ([ret_type_.name] equals ["Null"]) {
         emit [call void [register] [arg_vals] [varg_count]];

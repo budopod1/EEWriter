@@ -141,7 +141,7 @@ IRType#struct_ type [[IRType]:members] {
     return IRType [null, null, null, null, null, IRStructType [members], null];
 }
 
-IRType#array type [W:elem_count]x[IRType:elem_type] {
+IRType#array type [L:elem_count]x[IRType:elem_type] {
     return IRType [null, null, null, null, IRArrayType [elem_count, elem_type], null, null];
 }
 
