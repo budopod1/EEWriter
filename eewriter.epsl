@@ -252,7 +252,7 @@ Val#c null_ [Type_:type_] {
             ]]];
         } else {
             return const val [type_] [make const [[type_].ir] [[IRConstant] [
-                get_const_from_val[make const [true]],
+                get_const_from_val[make const [false]],
                 get_const_from_val[make const [[generic].ir] poison]
             ]]];
         };

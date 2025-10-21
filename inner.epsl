@@ -539,7 +539,8 @@ IRValue#[Type_:type_] [IRValue:val] == null_ {
         Val:struct_val = [basic val [generic] [val]].struct_;
         return [Internal_] [[cast [struct_val] to [Internal_]].get] == null_;
     } else {
-        return extract field [0] of [val] as [int type [1]];
+        IRValue:is_null = extract field [0] of [val] as [int type [1]];
+        return bitwise not [Bool_] [is_null];
     };
 }
 
@@ -555,8 +556,7 @@ IRValue#[Type_:type_] [IRValue:val] != null_ {
         Val:struct_val = [basic val [generic] [val]].struct_;
         return [Internal_] [[cast [struct_val] to [Internal_]].get] != null_;
     } else {
-        IRValue:is_null = extract field [0] of [val] as [int type [1]];
-        return bitwise not [Bool_] [is_null];
+        return extract field [0] of [val] as [int type [1]];
     };
 }
 
@@ -642,7 +642,7 @@ IRValue#wrap [IRValue:val] to optional type_ [Type_:to] {
         return val;
     } else {
         return make nonref struct_ [[IRValue] [
-            make const [false], val
+            make const [true], val
         ]];
     };
 }
