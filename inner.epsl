@@ -41,10 +41,10 @@ State#get state {
 }
 
 IRStructDef#[Struct_:struct_].ir {
-    [IRType]:members = [IRType] [];
+    [$IRType]:members = [$IRType] [];
     if (struct_.is_ref) {
         // add the ref counter field
-        [members].append[int type [64]];
+        [members].append[IRIntType [64]];
     };
     for (Field:field in struct_.fields) {
         [members].append[[field.type_].ir];
@@ -139,9 +139,9 @@ Str#next fn specifiers {
     return attrs;
 }
 
-IRType#[Type_:type_].ir_ret_type_ {
+$IRType#[Type_:type_].ir_ret_type_ {
     if ([type_.name] equals ["Null"]) {
-        return IRType [null, null, null, IRVoidType [], null, null, null];
+        return IRVoidType [];
     } else {
         return [type_].ir;
     };
@@ -247,40 +247,40 @@ Block#pop from block stack {
     return [block_stack].pop_end;
 }
 
-IRType#[Type_:type_].ir {
+$IRType#[Type_:type_].ir {
     if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"])
         || ([type_.name] equals ["Z"])) {
-        return int type [(W)type_.bits];
+        return IRIntType [(W)type_.bits];
     } elif ([type_.name] equals ["R"]) {
-        return float type [(W)type_.bits];
+        return IRFloatType [(W)type_.bits];
     } elif ([type_.name] equals ["Null"]) {
-        return int type [1];
+        return IRIntType [1];
     } elif (([type_.name] equals ["Internal"])
         || ([type_.name] equals ["Array"]) || ([type_.name] equals ["#Pointer"])
         || ([type_.name] equals ["#FuncPtr"])
         || ([type_.name] equals ["#StructBase"])) {
-        return ptr type;
+        return IRPtrType [];
     } elif ([type_].is_poly) {
-        return struct_ type [[IRType] [ptr type, ptr type]];
+        return IRStructType [[$IRType] [IRPtrType [], IRPtrType []]];
     } elif ([type_.name] equals ["Optional"]) {
         Type_:generic = type_.generics[0];
         if ([generic].is_nonnull_ptr) {
-            return ptr type;
+            return IRPtrType [];
         } elif ([generic].is_poly) {
             return [generic].ir;
         } else {
-            return struct_ type [[IRType] [
-                int type [1],
+            return IRStructType [[$IRType] [
+                IRIntType [1],
                 [generic].ir
             ]];
         };
     } elif ([type_.name] equals ["#VTable"]) {
-        return struct_ type [[IRType] [
-            int type [64], // struct id number
-            int type [64], // the length of the extendee list
-            ptr type, // the extendee list
-            ptr type, // the struct id (as a Str)
-            ptr type // the pointer to the free function
+        return IRStructType [[$IRType] [
+            IRIntType [64], // struct id number
+            IRIntType [64], // the length of the extendee list
+            IRPtrType [], // the extendee list
+            IRPtrType [], // the struct id (as a Str)
+            IRPtrType [] // the pointer to the free function
         ]];
     } else {
         Struct_?:maybe_struct = [type_].get_struct;
@@ -291,14 +291,14 @@ IRType#[Type_:type_].ir {
 
         Struct_:struct_ = [maybe_struct].unwrap;
         if (struct_.is_ref) {
-            return ptr type;
+            return IRPtrType [];
         } else {
-            [IRType]:members = [IRType] [];
+            [$IRType]:members = [$IRType] [];
             [members].require_capacity[[struct_.fields].len];
             for (Field:field in struct_.fields) {
                 [members].append[[field.type_].ir];
             };
-            return struct_ type [members];
+            return IRStructType [members];
         };
     };
 }
@@ -327,9 +327,9 @@ Bool#[Type_:type_].has_pointee {
         ([type_.name] equals ["Internal"]) || ([type_.name] equals ["#FuncPtr"]));
 }
 
-IRType#[Type_:type_].pointee {
+$IRType#[Type_:type_].pointee {
     if ([type_.name] equals ["Array"]) {
-        return struct_ type [[IRType] [int type [64], int type [64], int type [64], ptr type]];
+        return IRStructType [[$IRType] [IRIntType [64], IRIntType [64], IRIntType [64], IRPtrType []]];
     } elif ([type_.name] equals ["#Pointer"]) {
         return [type_.generics[0]].ir;
     } elif ([type_.name] equals ["Optional"]) {
@@ -341,28 +341,28 @@ IRType#[Type_:type_].pointee {
             if (!struct_.is_ref) {
                 abort ["Only ref structs have a pointee type, {} is not a ref struct" % struct_.id];
             };
-            [IRType]:members = [IRType] [int type [64] /* the ref counter */];
+            [$IRType]:members = [$IRType] [IRIntType [64] /* the ref counter */];
             [members].require_capacity[[struct_.fields].len+1];
             for (Field:field in struct_.fields) {
                 [members].append[[field.type_].ir];
             };
-            return struct_ type [members];
+            return IRStructType [members];
         };
 
         abort ["Type_ {} does not have a pointee IRType" % [type_].stringify];
     };
 }
 
-L#get min comptime sizeof [IRType:type] {
-    given (type.int as IRIntType:int_t) {
+L#get min comptime sizeof [$IRType:type] {
+    given (type as IRIntType:int_t) {
         return int_t.bits ~/ 8;
-    } given (type.float as IRFloatType:float_t) {
+    } given (type as IRFloatType:float_t) {
         return float_t.bits ~/ 8;
-    } given (type.array as IRArrayType:arr_t) {
+    } given (type as IRArrayType:arr_t) {
         return arr_t.elem_count * get min comptime sizeof [arr_t.elem_type];
-    } given (type.literal_struct as IRStructType:struct_t) {
+    } given (type as IRStructType:struct_t) {
         L:total = 0;
-        for (IRType:member in struct_t.members) {
+        for ($IRType:member in struct_t.members) {
             total += get min comptime sizeof [member];
         };
         return total;
@@ -404,7 +404,7 @@ Str#name register [W:id] {
     return ".{}" % id;
 }
 
-IRRegister#new register [IRType:type] {
+IRRegister#new register [$IRType:type] {
     return IRRegister [false, name register [next id], type];
 }
 
@@ -441,7 +441,7 @@ IRValue#emit [$IRValuedInstruction:valued] {
 }
 
 IRRegister#register of func [IRFunc:func] {
-    return IRRegister [true, func.name, ptr type];
+    return IRRegister [true, func.name, IRPtrType []];
 }
 
 IRValue#[IRFunc:func].make_ptr {
@@ -473,11 +473,11 @@ Val#const val [Type_:type_] [IRValue:val] {
 }
 
 IRValue#make nonref struct_ [[IRValue]:elems] {
-    [IRType]:member_types_ = [IRType] [];
+    [$IRType]:member_types_ = [$IRType] [];
     for (IRValue:elem in elems) {
         [member_types_].append[[elem].type];
     };
-    IRValue:struct_ = make const [struct_ type [member_types_]] poison;
+    IRValue:struct_ = make const [IRStructType [member_types_]] poison;
     for (W:i enumerating elems) {
         struct_ = emit [insert value [elems[i]] [struct_] [[W] [i]]];
     };
@@ -486,14 +486,14 @@ IRValue#make nonref struct_ [[IRValue]:elems] {
 
 IRValue#make const nonref struct_ [[IRValue]:elements] {
     [IRConstant]:const_elements = [IRConstant] [];
-    [IRType]:elem_types = [IRType] [];
+    [$IRType]:elem_types = [$IRType] [];
     for (IRValue:element in elements) {
         IRConstant:const_elem = [element.constant]
             .expect["All elements must be constants"];
         [const_elements].append[const_elem];
         [elem_types].append[const_elem.type];
     };
-    return make const [struct_ type [elem_types]] [const_elements];
+    return make const [IRStructType [elem_types]] [const_elements];
 }
 
 #call [Type_:ret_type_] [IRRegister:register] [[Type_]:arg_types_] [[Val]:args] {
@@ -539,7 +539,7 @@ IRValue#[Type_:type_] [IRValue:val] == null_ {
         Val:struct_val = [basic val [generic] [val]].struct_;
         return [Internal_] [[cast [struct_val] to [Internal_]].get] == null_;
     } else {
-        IRValue:is_null = extract field [0] of [val] as [int type [1]];
+        IRValue:is_null = extract field [0] of [val] as [IRIntType [1]];
         return bitwise not [Bool_] [is_null];
     };
 }
@@ -556,7 +556,7 @@ IRValue#[Type_:type_] [IRValue:val] != null_ {
         Val:struct_val = [basic val [generic] [val]].struct_;
         return [Internal_] [[cast [struct_val] to [Internal_]].get] != null_;
     } else {
-        return extract field [0] of [val] as [int type [1]];
+        return extract field [0] of [val] as [IRIntType [1]];
     };
 }
 
@@ -656,7 +656,7 @@ IRValue#unwrap optional [IRValue:val] of type_ [Type_:from] {
     };
 }
 
-IRValue#cast poly [IRValue:val] of type_ [Type_:from] to struct_ type_ {
+IRValue#cast poly [IRValue:val] of type_ [Type_:from] to IRStructType_ {
     return [[basic val [from] [val]].struct_].get;
 }
 
@@ -768,7 +768,7 @@ IRValue#cast [IRValue:val] from [Type_:from] to [Type_:to] {
         return emit [signed [val] to float [[to].ir]];
 
     } elif (([from.name] equals ["Poly"]) && ([from.generics[0]] == [to])) {
-        return cast poly [val] of type_ [from] to struct_ type_;
+        return cast poly [val] of type_ [from] to IRStructType_;
     } elif ([from].is_poly && ([to.name] equals ["Optional"])) {
         return cast poly [val] of type_ [from] to optional type_ [to];
     } elif ([to].is_poly) {
@@ -832,7 +832,7 @@ Val#access field [W:nth] of [Val:val] as [Type_:type_] {
     ]];
 }
 
-IRValue#extract field [W:nth] of [IRValue:agg] as [IRType:type] {
+IRValue#extract field [W:nth] of [IRValue:agg] as [$IRType:type] {
     return emit [extract value [agg] [[W] [nth]] [type]];
 }
 
@@ -866,7 +866,7 @@ IRConstant#get_const_from_val[Val:val] {
     abort ["Expected constant"];
 }
 
-IRValue#make_global type: [IRType:ir_type] name: [Str?:provided_name] basic_init: [IRConstant?:basic_init] str_init: [Str?:str_init] is_extern: [Bool:is_extern] is_const: [Bool:is_const] {
+IRValue#make_global type: [$IRType:ir_type] name: [Str?:provided_name] basic_init: [IRConstant?:basic_init] str_init: [Str?:str_init] is_extern: [Bool:is_extern] is_const: [Bool:is_const] {
     Bool:insignificant_name = [provided_name].is_null;
     if (!provided_name) {
         Str:frmt_str = "global_{}_{}";
@@ -881,7 +881,7 @@ IRValue#make_global type: [IRType:ir_type] name: [Str?:provided_name] basic_init
             return make const [global_.register];
         };
     };
-    IRRegister:register = IRRegister [true, name, ptr type];
+    IRRegister:register = IRRegister [true, name, IRPtrType []];
     Str?:linkage = null;
     if (is_extern) {
         if (basic_init || str_init) {

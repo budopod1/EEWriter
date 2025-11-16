@@ -5,7 +5,7 @@ $IRValuedInstruction#fneg [IRValue:val] {
     return IRFloatNegationInstruction [new register [[val].type], val];
 }
 
-$IRValuedInstruction#extract value [IRValue:aggregate] [[W]:indices] [IRType:field_type] {
+$IRValuedInstruction#extract value [IRValue:aggregate] [[W]:indices] [$IRType:field_type] {
     return IRExtractValueInstruction [new register [field_type], aggregate, indices];
 }
 
@@ -13,79 +13,79 @@ $IRValuedInstruction#insert value [IRValue:val] [IRValue:aggregate] [[W]:indices
     return IRInsertValueInstruction [new register [[aggregate].type], aggregate, val, indices];
 }
 
-$IRValuedInstruction#alloca [IRType:type] {
-    return IRAllocaInstruction [new register [ptr type], type];
+$IRValuedInstruction#alloca [$IRType:type] {
+    return IRAllocaInstruction [new register [IRPtrType []], type];
 }
 
-$IRValuedInstruction#alloca [IRValue:count] [IRType:type] {
-    return IRAllocaMultipleInstruction [new register [ptr type], type, count];
+$IRValuedInstruction#alloca [IRValue:count] [$IRType:type] {
+    return IRAllocaMultipleInstruction [new register [IRPtrType []], type, count];
 }
 
-$IRValuedInstruction#load [IRValue:ptr] to [IRType:type] {
+$IRValuedInstruction#load [IRValue:ptr] to [$IRType:type] {
     return IRLoadInstruction [new register [type], ptr];
 }
 
-$IRValuedInstruction#GEP [IRType:base_type] [IRValue:ptr] [[IRValue]:indices] {
-    return IRGEPInstruction [new register [ptr type], base_type, ptr, indices];
+$IRValuedInstruction#GEP [$IRType:base_type] [IRValue:ptr] [[IRValue]:indices] {
+    return IRGEPInstruction [new register [IRPtrType []], base_type, ptr, indices];
 }
 
-$IRValuedInstruction#truncate [IRValue:val] to [IRType:type] {
+$IRValuedInstruction#truncate [IRValue:val] to [$IRType:type] {
     return IRTruncateInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#zero extend [IRValue:val] to [IRType:type] {
+$IRValuedInstruction#zero extend [IRValue:val] to [$IRType:type] {
     return IRUnsignedExtendInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#sign extend [IRValue:val] to [IRType:type] {
+$IRValuedInstruction#sign extend [IRValue:val] to [$IRType:type] {
     return IRSignedExtendInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#float truncate [IRValue:val] to [IRType:type] {
+$IRValuedInstruction#float truncate [IRValue:val] to [$IRType:type] {
     return IRFloatTruncateInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#float extend [IRValue:val] to [IRType:type] {
+$IRValuedInstruction#float extend [IRValue:val] to [$IRType:type] {
     return IRFloatExtendInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#float [IRValue:val] to unsigned [IRType:type] {
+$IRValuedInstruction#float [IRValue:val] to unsigned [$IRType:type] {
     return IRFloatToUnsignedInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#float [IRValue:val] to signed [IRType:type] {
+$IRValuedInstruction#float [IRValue:val] to signed [$IRType:type] {
     return IRFloatToSignedInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#unsigned [IRValue:val] to float [IRType:type] {
+$IRValuedInstruction#unsigned [IRValue:val] to float [$IRType:type] {
     return IRUnsignedToFloatInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#signed [IRValue:val] to float [IRType:type] {
+$IRValuedInstruction#signed [IRValue:val] to float [$IRType:type] {
     return IRSignedToFloatInstruction [new register [type], val];
 }
 
-$IRValuedInstruction#ptr [IRValue:ptr] to int [IRType:type] {
+$IRValuedInstruction#ptr [IRValue:ptr] to int [$IRType:type] {
     return IRPtrToIntInstruction [new register [type], ptr];
 }
 
 $IRValuedInstruction#int [IRValue:int] to ptr {
-    return IRIntToPtrInstruction [new register [ptr type], int];
+    return IRIntToPtrInstruction [new register [IRPtrType []], int];
 }
 
 $IRValuedInstruction#compare int [IRValue:a] [Str:cmpop] [IRValue:b] {
-    return IRIntCompareInstruction [new register [int type [1]], cmpop, a, b];
+    return IRIntCompareInstruction [new register [IRIntType [1]], cmpop, a, b];
 }
 
 $IRValuedInstruction#compare float [IRValue:a] [Str:cmpop] [IRValue:b] {
-    return IRFloatCompareInstruction [new register [int type [1]], cmpop, a, b];
+    return IRFloatCompareInstruction [new register [IRIntType [1]], cmpop, a, b];
 }
 
-$IRValuedInstruction#select [IRType:type] [IRValue:if_true] if_ [IRValue:cond] else_ [IRValue:if_false] {
+$IRValuedInstruction#select [$IRType:type] [IRValue:if_true] if_ [IRValue:cond] else_ [IRValue:if_false] {
     return IRSelectInstruction [new register [type], cond, if_true, if_false];
 }
 
-$IRValuedInstruction#call [IRType:ret_type_] [IRRegister:register] [[IRValue]:args] [W:varg_count] {
+$IRValuedInstruction#call [$IRType:ret_type_] [IRRegister:register] [[IRValue]:args] [W:varg_count] {
     return IRCallInstruction [new register [ret_type_], IRBaseCallInstruction [register, args, varg_count]];
 }
 
@@ -125,74 +125,54 @@ $IRInstruction#call void [IRRegister:register] [[IRValue]:args] [W:varg_count] {
     return IRCallVoidInstruction [IRBaseCallInstruction [register, args, varg_count]];
 }
 
-IRType#ptr type {
-    return IRType [IRPtrType [], null, null, null, null, null, null];
-}
-
-IRType#int type [W:bits] {
-    return IRType [null, IRIntType [bits], null, null, null, null, null];
-}
-
-IRType#float type [W:bits] {
-    return IRType [null, null, IRFloatType [bits], null, null, null, null];
-}
-
-IRType#struct_ type [[IRType]:members] {
-    return IRType [null, null, null, null, null, IRStructType [members], null];
-}
-
-IRType#array type [L:elem_count]x[IRType:elem_type] {
-    return IRType [null, null, null, null, IRArrayType [elem_count, elem_type], null, null];
-}
-
 IRValue#make const [Bool:val] {
-    return IRValue [null, IRConstant [int type [1], IRIntConstant [val], null, null, null, null, null, null]];
+    return IRValue [null, IRConstant [IRIntType [1], IRIntConstant [val], null, null, null, null, null, null]];
 }
 
 IRValue#make const [Byte:val] {
-    return IRValue [null, IRConstant [int type [8], IRIntConstant [val], null, null, null, null, null, null]];
+    return IRValue [null, IRConstant [IRIntType [8], IRIntConstant [val], null, null, null, null, null, null]];
 }
 
 IRValue#make const [W:val] {
-    return IRValue [null, IRConstant [int type [32], IRIntConstant [val], null, null, null, null, null, null]];
+    return IRValue [null, IRConstant [IRIntType [32], IRIntConstant [val], null, null, null, null, null, null]];
 }
 
 IRValue#make const [L:val] [W:bits] {
-    return IRValue [null, IRConstant [int type [bits], IRIntConstant [val], null, null, null, null, null, null]];
+    return IRValue [null, IRConstant [IRIntType [bits], IRIntConstant [val], null, null, null, null, null, null]];
 }
 
 IRValue#make const [R:val] {
-    return IRValue [null, IRConstant [float type [64], null, IRFloatConstant [val], null, null, null, null, null]];
+    return IRValue [null, IRConstant [IRFloatType [64], null, IRFloatConstant [val], null, null, null, null, null]];
 }
 
 IRValue#make const [R:val] [W:bits] {
-    return IRValue [null, IRConstant [float type [bits], null, IRFloatConstant [val], null, null, null, null, null]];
+    return IRValue [null, IRConstant [IRFloatType [bits], null, IRFloatConstant [val], null, null, null, null, null]];
 }
 
-IRValue#make const [IRType:type] [[IRConstant]:elements] {
-    given (type.array as IRArrayType:arr) {
+IRValue#make const [$IRType:type] [[IRConstant]:elements] {
+    given (type as IRArrayType:arr) {
         return make const array [type] [elements];
     } else {
         return make const struct_ [type] [elements];
     };
 }
 
-IRValue#make const struct_ [IRType:type] [[IRConstant]:elements] {
+IRValue#make const struct_ [$IRType:type] [[IRConstant]:elements] {
     return IRValue [null, IRConstant [type, null, null, IRStructConstant [elements], null, null, null, null]];
 }
 
-IRValue#make const array [IRType:type] [[IRConstant]:elements] {
+IRValue#make const array [$IRType:type] [[IRConstant]:elements] {
     return IRValue [null, IRConstant [type, null, null, null, IRArrayConstant [elements], null, null, null]];
 }
 
 IRValue#make const [IRRegister:global_ptr] {
-    return IRValue [null, IRConstant [ptr type, null, null, null, null, IRGlobalPtrConstant [global_ptr], null, null]];
+    return IRValue [null, IRConstant [IRPtrType [], null, null, null, null, IRGlobalPtrConstant [global_ptr], null, null]];
 }
 
 IRValue#make const null_ ptr {
-    return IRValue [null, IRConstant [ptr type, null, null, null, null, null, IRNullConstant [], null]];
+    return IRValue [null, IRConstant [IRPtrType [], null, null, null, null, null, IRNullConstant [], null]];
 }
 
-IRValue#make const [IRType:type] poison {
+IRValue#make const [$IRType:type] poison {
     return IRValue [null, IRConstant [type, null, null, null, null, null, null, IRPoisonConstant []]];
 }
