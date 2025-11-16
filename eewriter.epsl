@@ -246,12 +246,12 @@ Val#c null_ [Type_:type_] {
         if ([generic].is_nonnull_ptr) {
             return const val [type_][make const null_ ptr];
         } elif ([generic].is_poly) {
-            IRConstant:null_ptr = get_const_from_val[make const null_ ptr];
-            return const val [type_][make const [[type_].ir] [[IRConstant] [
+            $IRConstant:null_ptr = get_const_from_val[make const null_ ptr];
+            return const val [type_][make const [[type_].ir] [[$IRConstant] [
                 null_ptr, null_ptr
             ]]];
         } else {
-            return const val [type_] [make const [[type_].ir] [[IRConstant] [
+            return const val [type_] [make const [[type_].ir] [[$IRConstant] [
                 get_const_from_val[make const [false]],
                 get_const_from_val[make const [[generic].ir] poison]
             ]]];
@@ -944,7 +944,7 @@ Label#new label: {
 }
 
 #switch_ on [Val:val] to [[Val]:targets] [[Label]:labels] otherwise [Label:otherwise] {
-    [IRConstant]:const_targets = [IRConstant] [];
+    [$IRConstant]:const_targets = [$IRConstant] [];
     for (Val:target in targets) {
         [const_targets].append[get_const_from_val[target]];
     };
@@ -1253,7 +1253,7 @@ Val#with field [Str:field] of [Val:val] as [Val:new_] {
 */
 
 Val#make global [Type_:type_] [Str?:name] [Val?:maybe_init] {
-    IRConstant?:const_init = null;
+    $IRConstant?:const_init = null;
     given (maybe_init as Val:init) {
         const_init = get_const_from_val[init];
     };
@@ -1263,7 +1263,7 @@ Val#make global [Type_:type_] [Str?:name] [Val?:maybe_init] {
 }
 
 Val#make ptr to global [Type_:type_] [Str?:name] [Val?:init] {
-    IRConstant?:const_init = null;
+    $IRConstant?:const_init = null;
     if (init) {
         const_init = get_const_from_val[[init].unwrap];
     };
@@ -1273,12 +1273,12 @@ Val#make ptr to global [Type_:type_] [Str?:name] [Val?:init] {
 }
 
 Val#make global struct_ [Type_:type_] [Str?:name] [[Val]:elements] {
-    [IRConstant]:const_elements = [IRConstant] [];
+    [$IRConstant]:const_elements = [$IRConstant] [];
     for (Val:element in elements) {
         [const_elements].append[get_const_from_val[element]];
     };
     $IRType:pointee = [type_].pointee;
-    IRConstant:const_init = [make const [pointee] [const_elements].constant].unwrap;
+    $IRConstant:const_init = [make const [pointee] [const_elements].constant].unwrap;
     IRValue:ir_ptr = make_global type: [pointee] name: [name]
         basic_init: [const_init] str_init: [null] is_extern: [false] is_const: [false];
     return const val [type_] [ir_ptr];
@@ -1573,7 +1573,7 @@ end fn;
     Type_:struct_type_ = T_ [struct_.id];
 
     [L]:extendee_ids = struct_.extendee_ids;
-    [IRConstant]:extendee_id_consts = [IRConstant] [];
+    [$IRConstant]:extendee_id_consts = [$IRConstant] [];
     for (L:extendee_id in extendee_ids step -1) {
         [extendee_id_consts].append[get_const_from_val[c L_ [extendee_id]]];
     };

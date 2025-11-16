@@ -105,7 +105,7 @@ $IRInstruction#branch to [IRBasicBlock:block] {
     return IRUnconditionalBranchInstruction [block.id];
 }
 
-$IRInstruction#switch_ on [IRValue:switch_on] to [[IRConstant]:targets] [[IRBasicBlock]:branches] otherwise [IRBasicBlock:default_branch] {
+$IRInstruction#switch_ on [IRValue:switch_on] to [[$IRConstant]:targets] [[IRBasicBlock]:branches] otherwise [IRBasicBlock:default_branch] {
     [W]:branch_ids = [W]*[branches].len;
     for (W:i enumerating branches) {
         branch_ids[i] = branches[i].id;
@@ -126,30 +126,30 @@ $IRInstruction#call void [IRRegister:register] [[IRValue]:args] [W:varg_count] {
 }
 
 IRValue#make const [Bool:val] {
-    return IRValue [null, IRConstant [IRIntType [1], IRIntConstant [val], null, null, null, null, null, null]];
+    return IRValue [null, IRIntConstant [IRIntType [1], val]];
 }
 
 IRValue#make const [Byte:val] {
-    return IRValue [null, IRConstant [IRIntType [8], IRIntConstant [val], null, null, null, null, null, null]];
+    return IRValue [null, IRIntConstant [IRIntType [8], val]];
 }
 
 IRValue#make const [W:val] {
-    return IRValue [null, IRConstant [IRIntType [32], IRIntConstant [val], null, null, null, null, null, null]];
+    return make const [val] [32];
 }
 
 IRValue#make const [L:val] [W:bits] {
-    return IRValue [null, IRConstant [IRIntType [bits], IRIntConstant [val], null, null, null, null, null, null]];
+    return IRValue [null, IRIntConstant [IRIntType [bits], val]];
 }
 
 IRValue#make const [R:val] {
-    return IRValue [null, IRConstant [IRFloatType [64], null, IRFloatConstant [val], null, null, null, null, null]];
+    return make const [val] [64];
 }
 
 IRValue#make const [R:val] [W:bits] {
-    return IRValue [null, IRConstant [IRFloatType [bits], null, IRFloatConstant [val], null, null, null, null, null]];
+    return IRValue [null, IRFloatConstant [IRFloatType [bits], val]];
 }
 
-IRValue#make const [$IRType:type] [[IRConstant]:elements] {
+IRValue#make const [$IRType:type] [[$IRConstant]:elements] {
     given (type as IRArrayType:arr) {
         return make const array [type] [elements];
     } else {
@@ -157,22 +157,22 @@ IRValue#make const [$IRType:type] [[IRConstant]:elements] {
     };
 }
 
-IRValue#make const struct_ [$IRType:type] [[IRConstant]:elements] {
-    return IRValue [null, IRConstant [type, null, null, IRStructConstant [elements], null, null, null, null]];
+IRValue#make const struct_ [$IRType:type] [[$IRConstant]:elements] {
+    return IRValue [null, IRStructConstant [type, elements]];
 }
 
-IRValue#make const array [$IRType:type] [[IRConstant]:elements] {
-    return IRValue [null, IRConstant [type, null, null, null, IRArrayConstant [elements], null, null, null]];
+IRValue#make const array [$IRType:type] [[$IRConstant]:elements] {
+    return IRValue [null, IRArrayConstant [type, elements]];
 }
 
 IRValue#make const [IRRegister:global_ptr] {
-    return IRValue [null, IRConstant [IRPtrType [], null, null, null, null, IRGlobalPtrConstant [global_ptr], null, null]];
+    return IRValue [null, IRGlobalPtrConstant [IRPtrType [], global_ptr]];
 }
 
 IRValue#make const null_ ptr {
-    return IRValue [null, IRConstant [IRPtrType [], null, null, null, null, null, IRNullConstant [], null]];
+    return IRValue [null, IRNullConstant [IRPtrType []]];
 }
 
 IRValue#make const [$IRType:type] poison {
-    return IRValue [null, IRConstant [type, null, null, null, null, null, null, IRPoisonConstant []]];
+    return IRValue [null, IRPoisonConstant [type]];
 }
