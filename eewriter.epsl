@@ -233,7 +233,7 @@ Val#c L_ [L:val] {
 }
 
 Val#c [Z:val] {
-    return const val [Z_][make const [(W)val]];
+    return const val [Z_][make const [val#W]];
 }
 
 Val#c [R:val] {
@@ -270,14 +270,14 @@ Val#c null_ {
 
 Val#c [Z:val] [Type_:type_] {
     if ([type_].is_float) {
-        return c [(R)val] [type_];
+        return c [val#R] [type_];
     } else {
-        return const val [type_][make const [(L)val] [(W)type_.bits]];
+        return const val [type_][make const [val#L] [type_.bits#W]];
     };
 }
 
 Val#c [R:val] [Type_:type_] {
-    return const val [type_][make const [val] [(W)type_.bits]];
+    return const val [type_][make const [val] [type_.bits#W]];
 }
 
 Bool#[Type_:type_].is_signed_int {
@@ -596,7 +596,7 @@ Val#[Val:a] % [Val:b] {
 Val#negate [Val:v] {
     if ([v.type_].is_int) {
         return basic val [v.type_] [emit [IRSubtractionInstruction [
-            new register [v.type_], [Str] [], make const [0] [(W)v.type_.bits], [v].get
+            new register [v.type_], [Str] [], make const [0] [v.type_.bits#W], [v].get
         ]]];
     } else {
         return basic val [v.type_] [emit [fneg [[v].get]]];
@@ -1224,7 +1224,7 @@ Val#[Val:val].[W:field] {
 Val#[Val:val].[Str:field] {
     Struct_:struct_ = assert [val] is struct_;
     L:field_idx = index of field [field] in [struct_];
-    return [val].[(W)field_idx];
+    return [val].[field_idx#W];
 }
 
 /*

@@ -250,9 +250,9 @@ Block#pop from block stack {
 $IRType#[Type_:type_].ir {
     if (([type_.name] equals ["Bool"]) || ([type_.name] equals ["Byte"]) || ([type_.name] equals ["W"])
         || ([type_.name] equals ["Z"])) {
-        return IRIntType [(W)type_.bits];
+        return IRIntType [type_.bits#W];
     } elif ([type_.name] equals ["R"]) {
-        return IRFloatType [(W)type_.bits];
+        return IRFloatType [type_.bits#W];
     } elif ([type_.name] equals ["Null"]) {
         return IRIntType [1];
     } elif (([type_.name] equals ["Internal"])
@@ -427,9 +427,9 @@ IRValue#emit [$IRValuedInstruction:valued] {
 
 #emit [$IRInstruction:instruction] {
     [current bb.instructions].append[instruction];
-    if ((IRRetVoidInstruction?)instruction || (IRRetInstruction?)instruction
-        || (IRConditionalBranchInstruction?)instruction || (IRUnconditionalBranchInstruction?)instruction
-        || (IRSwitchInstruction?)instruction || (IRUnreachableInstruction?)instruction) {
+    if (instruction#IRRetVoidInstruction? || instruction#IRRetInstruction?
+        || instruction#IRConditionalBranchInstruction? || instruction#IRUnconditionalBranchInstruction?
+        || instruction#IRSwitchInstruction? || instruction#IRUnreachableInstruction?) {
         current bb.is_terminated = true;
     };
 }
@@ -510,7 +510,7 @@ IRValue#make const nonref struct_ [[IRValue]:elements] {
         [arg_vals].append[[args[i]].get];
     };
 
-    W:varg_count = (W)([args].len - [arg_types_].len);
+    W:varg_count = ([args].len - [arg_types_].len)#W;
 
     if ([ret_type_.name] equals ["Null"]) {
         emit [call void [register] [arg_vals] [varg_count]];
@@ -523,7 +523,7 @@ IRValue#make const nonref struct_ [[IRValue]:elements] {
 
 IRValue#bitwise not [Type_:type_] [IRValue:val] {
     return emit [IRXORInstruction [
-        new register [type_], [Str] [], val, make const [(L)-1] [(W)type_.bits]
+        new register [type_], [Str] [], val, make const [-1#L] [type_.bits#W]
     ]];
 }
 
@@ -569,9 +569,9 @@ IRValue#compute truth value [Type_:type_] [IRValue:val] {
         IRValue:length = [[basic val [type_] [val]].length].get;
         return emit [compare int [length] ["ne"] [make const [0] [64]]];
     } elif ([type_].is_int) {
-        return emit [compare int [val] ["ne"] [make const [0] [(W)type_.bits]]];
+        return emit [compare int [val] ["ne"] [make const [0] [type_.bits#W]]];
     } elif ([type_].is_float) {
-        return emit [compare float [val] ["one"] [make const [0.0] [(W)type_.bits]]];
+        return emit [compare float [val] ["one"] [make const [0.0] [type_.bits#W]]];
     } elif ([type_.name] equals ["Null"]) {
         return make const [false];
     } elif ([type_.name] equals ["Internal"]) {
@@ -592,9 +592,9 @@ IRValue#compute untruth value [Type_:type_] [IRValue:val] {
         IRValue:length = [[basic val [type_] [val]].length].get;
         return emit [compare int [length] ["eq"] [make const [0] [64]]];
     } elif ([type_].is_int) {
-        return emit [compare int [val] ["eq"] [make const [0] [(W)type_.bits]]];
+        return emit [compare int [val] ["eq"] [make const [0] [type_.bits#W]]];
     } elif ([type_].is_float) {
-        return emit [compare float [val] ["oeq"] [make const [0.0] [(W)type_.bits]]];
+        return emit [compare float [val] ["oeq"] [make const [0.0] [type_.bits#W]]];
     } elif ([type_.name] equals ["Null"]) {
         return make const [true];
     } elif ([type_.name] equals ["Internal"]) {
