@@ -397,7 +397,10 @@ IRBasicBlock#new bb {
 }
 
 W#next id {
-    return [get active func.base.ir_func.body].unwrap.id_counter++;
+    IRFuncBody:body = [get active func.base.ir_func.body].unwrap;
+    W:id = body.id_counter;
+    body.id_counter = id + 1;
+    return id;
 }
 
 Str#name register [W:id] {
