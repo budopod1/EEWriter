@@ -329,7 +329,7 @@ Bool#[Type_:type_].is_ref {
 }
 
 #assert [Type_:type_] is array {
-    if ([type_.name] not equals ["Array"]) {
+    if (![type_.name] equals ["Array"]) {
         abort ["Expected type_ Array, found {}" % [type_].stringify];
     };
 }
@@ -349,7 +349,7 @@ Bool#[Type_:type_].is_ref {
 }
 
 #assert [Type_:type_] is vtable {
-    if ([type_.name] not equals ["#VTable"]) {
+    if (![type_.name] equals ["#VTable"]) {
         abort ["Expected type_ VTable, found {}" % [type_].stringify];
     };
 }
@@ -359,7 +359,7 @@ Bool#[Type_:type_].is_ref {
 }
 
 #assert [Type_:type_] is pointer {
-    if ([type_.name] not equals ["#Pointer"]) {
+    if (![type_.name] equals ["#Pointer"]) {
         abort ["Expected type_ Pointer, found {}" % [type_].stringify];
     };
 }
@@ -453,7 +453,7 @@ Val#deep unwrap nullability [Val:val] {
 }
 
 #assert [Type_:type_] is optional {
-    if ([type_.name] not equals ["Optional"]) {
+    if (![type_.name] equals ["Optional"]) {
         abort ["Type_ {} is not an Optional" % [type_].stringify];
     };
 }
@@ -669,7 +669,7 @@ Val#&[Val:v] {
 }
 
 Val#*[Val:val] {
-    if ([val.type_.name] not equals ["#Pointer"]) {
+    if (![val.type_.name] equals ["#Pointer"]) {
         abort ["Can only directly dereference Pointer type_, not {}" % [val.type_].stringify];
     };
     return assignable val [val.type_.generics[0]] [[val].get];
@@ -1353,7 +1353,7 @@ Val#make global Str_ [Str:string] {
 }
 
 Val#new array [Type_:type_] [[Val]:vals] with capacity [L:capacity] {
-    if ([type_.name] not equals ["Array"]) {
+    if (![type_.name] equals ["Array"]) {
         abort ["Expected Array type_, found {}" % [type_].stringify];
     };
 

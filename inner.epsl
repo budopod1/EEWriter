@@ -159,7 +159,7 @@ ExternFunc#create new extern fn [Type_:ret_type_] [Str:name] [[Type_]:arg_types_
 }
 
 Bool#extern func matches [ExternFunc:fn] [Type_:ret_type_] [Str:name] [[Type_]:arg_types_] [Bool:has_vargs] {
-    if ([fn.ir_func.name] not equals [name]) {
+    if (![fn.ir_func.name] equals [name]) {
         return false;
     };
     if ([fn.ir_func.has_vargs] ^ [has_vargs]) {
@@ -671,7 +671,7 @@ IRValue#cast poly [IRValue:val] of type_ [Type_:from] to optional type_ [Type_:t
         Struct_:to_struct_ = assert [generic.generics[0]] is struct_;
 
         // if from IS Struct, then this will always be a downcast
-        if ([from.name] not equals ["Struct"]) {
+        if (![from.name] equals ["Struct"]) {
             Struct_:from_struct_ = assert [from.generics[0]] is struct_;
             
             Bool:is_nocast = from_struct_.id == to_struct_.id;
